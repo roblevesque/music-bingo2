@@ -70,8 +70,9 @@ uvicorn app.main:app --reload
 
 ## 4. Core Game Logic
 
-- **Ticket:** a NxN grid of n songs drawn from the game's song pool (typically 30 to 75 songs, but leave amount up to host).
+- **Ticket:** a NxN grid (typically, 5x5 but host configurable) of a number songs drawn from the game's song pool (typically 30 to 75 songs, but leave amount up to host).
 - **Ticket generator:** produces N unique tickets, balances how often each song appears, and rejects duplicates or near-duplicates.
+    -   Near-Duplicate tickets are defined as tickets that share approximately 80% of the same song IDs, or the same set of songs in a different permutation.
 - **Play order:** shuffled once when the game starts and stored in the DB, so games are resumable and claims are verifiable. Allow reshuffle on the fly if host decides necessary
 - **Claim checker:** a claim is valid if every song in the claimed row(s) is in the played prefix. Returns one of: `win`, `rejected` (with missing songs), `already_claimed`.
 - **Win types:** one line, two lines, full house.
@@ -87,7 +88,7 @@ Build and unit-test the generator and checker first. They are the correctness co
 | `User` (host) | username, password_hash |
 | `Song` | file path, title, artist, tags, duration |
 | `Game` | code, status, song pool, play order, current index |
-| `Ticket` | game, ticket number, 15 song references (N rows x N) |
+| `Ticket` | game, ticket number, Variable song references (N rows x N) |
 | `Player` | game, display name, assigned ticket |
 | `Claim` | player, claim type, result, timestamp |
 
