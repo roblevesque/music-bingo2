@@ -87,7 +87,7 @@ Build and unit-test the generator and checker first. They are the correctness co
 | `User` (host) | username, password_hash |
 | `Song` | file path, title, artist, tags, duration |
 | `Game` | code, status, song pool, play order, current index |
-| `Ticket` | game, ticket number, 15 song references (3 rows x 5) |
+| `Ticket` | game, ticket number, 15 song references (N rows x N) |
 | `Player` | game, display name, assigned ticket |
 | `Claim` | player, claim type, result, timestamp |
 
@@ -196,6 +196,6 @@ Phases 1 to 3 produce a playable game. Each phase ends with something runnable o
 ## 10. Open Decisions (Answers in DECISIONS.md)
 
 - [X] Primary audio mode: in-room, remote, or both?
-- [ ] FastAPI vs Flask?
+- [X] FastAPI vs Flask?
 - [X] Do players need persistent accounts, or are game-code joins enough?
 - [X] Which win types ship in the MVP?
