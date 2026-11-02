@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ song.title }} &middot; Music Bingo{% endblock %}
+{% block content %}
+<p><a href="/library">&larr; Back to library</a></p>
+<h1>Edit song</h1>
+
+{% for error in errors %}<p class="flash error">{{ error }}</p>{% endfor %}
+
+<section class="card">
+  <audio id="clip-player" controls preload="metadata" src="/library/{{ song.id }}/audio"></audio>
+  <p class="muted">Use the player to find the best part, then capture the start and end points.
+    The audio file itself is never changed; only the play window is saved.</p>
+
+  <form method="post" action="/library/{{ song.id }}/edit">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>Title
+      <input name="title" value="{{ form.title }}" maxlength="200" required>
+    </label>
+    <label>Artist
+      <input name="artist" value="{{ form.artist }}" maxlength="200">
+    </label>
+    <label>Tags <span class="muted">(comma separated, e.g. 80s, rock)</span>
+      <input name="tags" value="{{ form.tags }}">
+    </label>
+
+    <div class="row">
+      <label>Start <span class="muted">(seconds or m:ss)</span>
+        <input id="start" name="start" value="{{ form.start }}" inputmode="decimal">
+      </label>
+      <button type="button" data-capture="start">Use current position</button>
+    </div>
+    <div class="row">
+      <label>End <span class="muted">(blank = to the end)</span>
+        <input id="end" name="end" value="{{ form.end }}" inputmode="decimal">
+      </label>
+      <button type="button" data-capture="end">Use current position</button>
+    </div>
+    <p><button type="button" id="preview">Preview play window</button></p>
+
+    <label class="check">
+      <input type="checkbox" name="write_tags_to_file" value="on">
+      Also write title and artist into the audio file&rsquo;s own tags
+    </label>
+
+    <button type="submit">Save</button>
+  </form>
+</section>
+{% endblock %}

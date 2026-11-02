@@ -1,0 +1,29 @@
+[project]
+name = "musicbingo"
+version = "0.1.0"
+description = "Web-based Music Bingo: host plays clips, players mark tickets. No Node.js."
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",          # pulls in a Starlette new enough for Range requests
+    "uvicorn[standard]>=0.30",
+    "jinja2>=3.1",
+    "sqlmodel>=0.0.22",
+    "python-multipart>=0.0.9",
+    "itsdangerous>=2.2",       # signed session cookies
+    "argon2-cffi>=23.1",       # password hashing
+    "mutagen>=1.47",           # read/write ID3 and Vorbis tags, no ffmpeg needed
+]
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.16.0",
+    "pytest>=8",
+    # required by FastAPI's TestClient
+]
+
+[tool.uv]
+package = false               # an application, not an installable library
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Library &middot; Music Bingo{% endblock %}
+{% block content %}
+<h1>Song library</h1>
+
+<section class="card">
+  <h2>Add clips</h2>
+  <form method="post" action="/library/upload" enctype="multipart/form-data" class="row">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="file" name="files" accept=".mp3,.ogg,.oga,audio/mpeg,audio/ogg" multiple required>
+    <button type="submit">Upload</button>
+  </form>
+  <p class="muted">MP3 or Ogg. Title and artist are read from the file's tags when present.</p>
+</section>
+
+<section class="card">
+  <form method="get" action="/library" class="row">
+    <input type="search" name="q" value="{{ q }}" placeholder="Search title, artist or tag">
+    <button type="submit">Search</button>
+    {% if q %}<a href="/library">Clear</a>{% endif %}
+  </form>
+
+  {% if songs %}
+  <div class="scroll">
+  <table>
+    <thead>
+      <tr><th>Title</th><th>Artist</th><th>Tags</th><th>Play window</th><th>Length</th><th></th></tr>
+    </thead>
+    <tbody>
+    {% for song in songs %}
+      <tr>
+        <td>{{ song.title }}</td>
+        <td>{{ song.artist }}</td>
+        <td>{% for tag in song.tag_list %}<span class="tag">{{ tag }}</span> {% endfor %}</td>
+        <td>
+          {% if song.start_ms or song.end_ms %}
+            {{ song.start_ms|clock }} &ndash; {{ song.end_ms|clock if song.end_ms else 'end' }}
+          {% else %}<span class="muted">full track</span>{% endif %}
+        </td>
+        <td>{{ song.duration_ms|clock if song.duration_ms else '' }}</td>
+        <td class="actions">
+          <a href="/library/{{ song.id }}/edit">Edit</a>
+          <form method="post" action="/library/{{ song.id }}/delete" class="inline"
+                data-confirm="Delete &ldquo;{{ song.title }}&rdquo;? This also removes the audio file.">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="link danger" type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <p class="muted">{{ songs|length }} song{{ '' if songs|length == 1 else 's' }}{% if q %} matching &ldquo;{{ q }}&rdquo;{% endif %}</p>
+  {% elif q %}
+  <p class="muted">No songs match &ldquo;{{ q }}&rdquo;.</p>
+  {% else %}
+  <p class="muted">No songs yet. Upload some clips above.</p>
+  {% endif %}
+</section>
+{% endblock %}

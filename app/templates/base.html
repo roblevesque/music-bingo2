@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Music Bingo{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='styles.css') }}">
+  <script type="module" src="{{ url_for('static', path='app.js') }}"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">&#9835; Music Bingo</a>
+    {% if user %}
+    <nav><a href="/library">Library</a></nav>
+    <form method="post" action="/logout" class="inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <span class="who">{{ user.username }}</span>
+      <button class="link" type="submit">Log out</button>
+    </form>
+    {% endif %}
+  </header>
+  <main>
+    {% for kind, message in flashes %}
+    <p class="flash {{ kind }}" role="status">{{ message }}</p>
+    {% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
