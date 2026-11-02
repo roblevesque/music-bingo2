@@ -55,3 +55,41 @@ function setupClipEditor() {
 }
 
 setupClipEditor();
+
+// New-game page: filter the song list, bulk select, and show how many songs are chosen.
+function setupSongPicker() {
+  const picker = document.querySelector("[data-song-picker]");
+  if (!picker) return;
+  const rows = [...picker.querySelectorAll("tbody tr")];
+  const filter = picker.querySelector("[data-filter]");
+  const counter = picker.querySelector("#selected-count");
+  const gridInput = document.querySelector("#grid_size");
+  const checkbox = (row) => row.querySelector("input[type=checkbox]");
+
+  const update = () => {
+    const chosen = rows.filter((row) => checkbox(row).checked).length;
+    const size = parseInt(gridInput?.value, 10);
+    const needed = Number.isFinite(size) ? size * size : null;
+    let text = `${chosen} song${chosen === 1 ? "" : "s"} selected`;
+    if (needed !== null) text += ` \u2014 a ${size}\u00d7${size} ticket needs at least ${needed}`;
+    counter.textContent = text;
+  };
+
+  filter?.addEventListener("input", () => {
+    const needle = filter.value.trim().toLowerCase();
+    rows.forEach((row) => { row.hidden = needle !== "" && !row.dataset.text.includes(needle); });
+  });
+  picker.querySelector("[data-select=visible]")?.addEventListener("click", () => {
+    rows.filter((row) => !row.hidden).forEach((row) => { checkbox(row).checked = true; });
+    update();
+  });
+  picker.querySelector("[data-select=none]")?.addEventListener("click", () => {
+    rows.forEach((row) => { checkbox(row).checked = false; });
+    update();
+  });
+  picker.addEventListener("change", update);
+  gridInput?.addEventListener("input", update);
+  update();
+}
+
+setupSongPicker();

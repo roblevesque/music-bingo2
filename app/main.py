@@ -13,7 +13,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.config import Settings, load_settings
 from app.db import init_db, make_engine
 from app.deps import LoginRequired
-from app.routes import auth, library
+from app.routes import auth, games, library
 from app.web import BASE_DIR
 
 
@@ -54,4 +54,5 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
     app.include_router(auth.router)
     app.include_router(library.router)
+    app.include_router(games.router)
     return app

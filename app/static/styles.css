@@ -66,3 +66,25 @@ th { color: var(--muted); font-weight: 600; font-size: 0.85rem; }
 .tag { display: inline-block; padding: 0 0.5rem; border-radius: 999px; border: 1px solid var(--border);
   font-size: 0.8rem; color: var(--muted); }
 audio { width: 100%; margin-bottom: 0.5rem; }
+
+/* ---- phase 2: games ---- */
+a.button { display: inline-block; padding: 0.5rem 1rem; border-radius: 6px; background: var(--accent);
+  color: var(--accent-text); text-decoration: none; }
+.spread { justify-content: space-between; align-items: center; }
+.code { font: 700 1.6rem/1 ui-monospace, monospace; letter-spacing: 0.15em; }
+code { font-family: ui-monospace, monospace; }
+.tall { max-height: 22rem; overflow-y: auto; }
+select, input[type=number] { display: block; width: 100%; padding: 0.5rem; margin-top: 0.2rem;
+  border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; }
+fieldset { border: 1px solid var(--border); border-radius: 6px; margin: 0 0 0.8rem; }
+.stack > * { margin-bottom: 0.6rem; }
+details.round { border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.8rem; margin-bottom: 0.6rem; }
+details.round summary { cursor: pointer; }
+.chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.chip { min-width: 2.4rem; text-align: center; padding: 0.2rem 0.5rem; border: 1px solid var(--border);
+  border-radius: 6px; text-decoration: none; }
+.ticket { display: grid; gap: 4px; margin: 1rem 0; }
+.square { display: flex; flex-direction: column; justify-content: center; text-align: center;
+  min-height: 5rem; padding: 0.4rem; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--surface); font-size: 0.85rem; overflow-wrap: anywhere; }
+.square span { color: var(--muted); font-size: 0.75rem; }

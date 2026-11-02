@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}New game &middot; Music Bingo{% endblock %}
+{% block content %}
+<p><a href="/games">&larr; Games</a></p>
+<h1>New game</h1>
+{% for error in errors %}<p class="flash error">{{ error }}</p>{% endfor %}
+
+<form method="post" action="/games/new">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+  <section class="card">
+    <label>Game name
+      <input name="name" value="{{ form.name }}" maxlength="100" required>
+    </label>
+    <div class="row">
+      <label>Grid size <span class="muted">({{ min_grid }}&ndash;{{ max_grid }}; 5 gives a 5&times;5 ticket)</span>
+        <input id="grid_size" name="grid_size" type="number" min="{{ min_grid }}" max="{{ max_grid }}"
+               value="{{ form.grid_size }}" required>
+      </label>
+      <label>Number of tickets <span class="muted">(up to {{ max_tickets }})</span>
+        <input name="ticket_count" type="number" min="1" max="{{ max_tickets }}" value="{{ form.ticket_count }}" required>
+      </label>
+    </div>
+  </section>
+
+  <section class="card" data-song-picker>
+    <h2>Song pool</h2>
+    {% if songs %}
+    <p class="muted">A ticket needs one song per square, so the pool must have at least grid&nbsp;size&sup2; songs;
+      a pool of about twice that gives tickets more variety.</p>
+    <div class="row">
+      <label>Filter <input type="search" data-filter placeholder="Title, artist or tag"></label>
+      <button type="button" data-select="visible">Select shown</button>
+      <button type="button" data-select="none">Clear all</button>
+    </div>
+    <p id="selected-count" class="muted" aria-live="polite"></p>
+    <div class="scroll tall">
+    <table>
+      <thead><tr><th></th><th>Title</th><th>Artist</th><th>Tags</th></tr></thead>
+      <tbody>
+      {% for song in songs %}
+        <tr data-text="{{ (song.title ~ ' ' ~ song.artist ~ ' ' ~ song.tags)|lower }}">
+          <td><input type="checkbox" name="song_ids" value="{{ song.id }}" {% if song.id in selected %}checked{% endif %}></td>
+          <td>{{ song.title }}</td>
+          <td>{{ song.artist }}</td>
+          <td>{% for tag in song.tag_list %}<span class="tag">{{ tag }}</span> {% endfor %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p class="muted">Your library is empty. <a href="/library">Upload some clips</a> first.</p>
+    {% endif %}
+  </section>
+
+  <button type="submit"{% if not songs %} disabled{% endif %}>Create game and generate tickets</button>
+</form>
+{% endblock %}

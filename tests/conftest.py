@@ -82,3 +82,26 @@ def logged_in(app, client):
     add_user(app)
     login(client)
     return client
+
+
+def seed_songs(app, client, tmp_path, count):
+    """Upload `count` songs ('song 00', 'song 01', ...) and return their ids."""
+    data = make_mp3(tmp_path / "seed.mp3").read_bytes()
+    for i in range(count):
+        upload(client, f"song {i:02d}.mp3", data)
+    return [song.id for song in all_songs(app)]
+
+
+def create_game(client, song_ids, name="Pub Night", grid_size=3, tickets=5):
+    return client.post(
+        "/games/new",
+        data={"name": name, "grid_size": str(grid_size), "ticket_count": str(tickets),
+              "song_ids": [str(i) for i in song_ids],
+              "csrf_token": csrf_token(client, "/games/new")},
+        follow_redirects=False,
+    )
+
+
+def game_id_from(response):
+    assert response.status_code == 303, response.text
+    return int(response.headers["location"].rsplit("/", 1)[1])

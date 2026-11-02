@@ -10,7 +10,7 @@ from starlette.concurrency import run_in_threadpool
 
 from app.db import get_session
 from app.deps import require_user
-from app.models import Song, User
+from app.models import Game, GameSong, Song, User
 from app.security import check_csrf
 from app.services.clips import (
     ALLOWED_TYPES,
@@ -215,6 +215,13 @@ def delete_song(
 ):
     check_csrf(request, csrf_token)
     song = owned_song(session, user, song_id)
+    used_in = session.exec(
+        select(Game.name).join(GameSong, GameSong.game_id == Game.id).where(GameSong.song_id == song.id)
+    ).all()
+    if used_in:
+        names = ", ".join(f"\u201c{name}\u201d" for name in used_in[:3])
+        flash(request, f"Can't delete \u201c{song.title}\u201d: it is in the song pool of {names}. Delete those games first.", "error")
+        return _redirect("/library")
     _clip_path(request, song).unlink(missing_ok=True)
     session.delete(song)
     session.commit()

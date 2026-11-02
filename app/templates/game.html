@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}{{ game.name }} &middot; Music Bingo{% endblock %}
+
+{% macro round_fields(r, size_hint) %}
+  <label>Name <input name="name" value="{{ r.name if r else '' }}" maxlength="60" placeholder="e.g. Round 2"></label>
+  <label>Wins with
+    <select name="mode">
+      <option value="lines" {% if not r or r.mode == 'lines' %}selected{% endif %}>Lines</option>
+      <option value="full_house" {% if r and r.mode == 'full_house' %}selected{% endif %}>Full house</option>
+    </select>
+  </label>
+  <label>Lines needed
+    <input name="lines_required" type="number" min="1" max="{{ max_lines }}" value="{{ r.lines_required if r else 1 }}">
+  </label>
+  <fieldset>
+    <legend class="muted">Line types that count</legend>
+    <label class="check"><input type="checkbox" name="rows" value="on" {% if not r or r.rows %}checked{% endif %}> Rows</label>
+    <label class="check"><input type="checkbox" name="columns" value="on" {% if r and r.columns %}checked{% endif %}> Columns</label>
+    <label class="check"><input type="checkbox" name="diagonals" value="on" {% if r and r.diagonals %}checked{% endif %}> Diagonals</label>
+  </fieldset>
+{% endmacro %}
+
+{% block content %}
+<p><a href="/games">&larr; Games</a></p>
+<div class="row spread">
+  <h1>{{ game.name }}</h1>
+  <form method="post" action="/games/{{ game.id }}/delete" class="inline"
+        data-confirm="Delete this game and all of its tickets?">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button class="link danger" type="submit">Delete game</button>
+  </form>
+</div>
+
+<section class="card">
+  <p>Join code <strong class="code">{{ game.code }}</strong></p>
+  <p class="muted">{{ game.grid_size }}&times;{{ game.grid_size }} tickets &middot;
+    {{ ticket_numbers|length }} tickets &middot; {{ song_count }} songs in the pool &middot; status: {{ game.status }}</p>
+</section>
+
+<section class="card">
+  <h2>Rounds</h2>
+  <p class="muted">You choose which patterns win in each round, and can change them as the game goes on.</p>
+  {% for r, text in rounds %}
+  <details class="round">
+    <summary><strong>{{ r.number }}. {{ r.name or ('Round ' ~ r.number) }}</strong> &mdash; {{ text }}</summary>
+    <form method="post" action="/games/{{ game.id }}/rounds/{{ r.id }}" class="stack">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      {{ round_fields(r, game.grid_size) }}
+      <button type="submit">Save round</button>
+    </form>
+    <form method="post" action="/games/{{ game.id }}/rounds/{{ r.id }}/delete" class="inline"
+          data-confirm="Delete this round?">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="link danger" type="submit">Delete round</button>
+    </form>
+  </details>
+  {% endfor %}
+
+  <details class="round">
+    <summary>Add a round</summary>
+    <form method="post" action="/games/{{ game.id }}/rounds" class="stack">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      {{ round_fields(none, game.grid_size) }}
+      <button type="submit">Add round</button>
+    </form>
+  </details>
+</section>
+
+<section class="card">
+  <h2>Tickets</h2>
+  <p class="chips">
+    {% for n in ticket_numbers %}<a class="chip" href="/games/{{ game.id }}/tickets/{{ n }}">{{ n }}</a>{% endfor %}
+  </p>
+</section>
+{% endblock %}
