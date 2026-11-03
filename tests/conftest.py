@@ -24,9 +24,11 @@ def client(app):
 
 
 def csrf_token(client, path="/login"):
+    """The CSRF token from a page: a hidden form field, or data-csrf on the player and console pages."""
     html = client.get(path).text
-    return re.search(r'name="csrf_token" value="([^"]+)"', html).group(1)
-
+    match = re.search(r'name="csrf_token" value="([^"]+)"', html) or re.search(r'data-csrf="([^"]+)"', html)
+    assert match, f"no CSRF token found on {path}"
+    return match.group(1)
 
 def add_user(app, username="host", password=PASSWORD):
     with Session(app.state.engine) as session:
@@ -105,3 +107,88 @@ def create_game(client, song_ids, name="Pub Night", grid_size=3, tickets=5):
 def game_id_from(response):
     assert response.status_code == 303, response.text
     return int(response.headers["location"].rsplit("/", 1)[1])
+
+
+# ---------------------------------------------------------------- phase 3 helpers
+
+from datetime import datetime, timedelta, timezone  # noqa: E402
+
+from app.models import Claim, Game, GameSong, Team, Ticket  # noqa: E402
+
+
+def new_player(app):
+    """A separate browser with no host login."""
+    return TestClient(app)
+
+
+def join_game(player, code, name="Team A"):
+    return player.post(
+        "/join",
+        data={"code": code, "team_name": name, "csrf_token": csrf_token(player, "/join")},
+        follow_redirects=False,
+    )
+
+
+def host_post(client, game_id, action, **fields):
+    data = {"csrf_token": csrf_token(client, f"/games/{game_id}/run")}
+    data.update(fields)
+    return client.post(f"/games/{game_id}/run/{action}", data=data)
+
+
+def get_game(app, game_id):
+    with Session(app.state.engine) as session:
+        return session.get(Game, game_id)
+
+
+def team_ticket(app, game_id, name):
+    """(team, ticket cells) for the team with this name."""
+    with Session(app.state.engine) as session:
+        team = session.exec(select(Team).where(Team.game_id == game_id, Team.name == name)).one()
+        return team, list(session.get(Ticket, team.ticket_id).cells)
+
+
+def pool_ids(app, game_id):
+    with Session(app.state.engine) as session:
+        return list(session.exec(select(GameSong.song_id).where(GameSong.game_id == game_id)).all())
+
+
+def set_play_order(app, game_id, first):
+    """Make `first` the songs that will be played first (the rest follow)."""
+    rest = [sid for sid in pool_ids(app, game_id) if sid not in first]
+    with Session(app.state.engine) as session:
+        game = session.get(Game, game_id)
+        game.play_order = list(first) + rest
+        game.current_index = 0
+        session.add(game)
+        session.commit()
+
+
+def set_played_count(app, game_id, count):
+    """Pretend the first `count` songs of the play order have been played."""
+    with Session(app.state.engine) as session:
+        game = session.get(Game, game_id)
+        game.current_index = count
+        session.add(game)
+        session.commit()
+
+
+def age_claims(app, seconds=60):
+    """Pretend claims were made `seconds` ago, to get past the claim cooldown."""
+    with Session(app.state.engine) as session:
+        for claim in session.exec(select(Claim)).all():
+            claim.created_at = datetime.now(timezone.utc) - timedelta(seconds=seconds)
+            session.add(claim)
+        session.commit()
+
+
+def claim_bingo(player, code):
+    return player.post(f"/play/{code}/claim", data={"csrf_token": csrf_token(player, f"/play/{code}")})
+
+
+@pytest.fixture
+def running_game(app, logged_in, tmp_path):
+    """A started 3x3 game with 12 songs and 6 tickets. Returns (host client, game id, code)."""
+    ids = seed_songs(app, logged_in, tmp_path, 12)
+    game_id = game_id_from(create_game(logged_in, ids, grid_size=3, tickets=6))
+    assert host_post(logged_in, game_id, "start").status_code == 200
+    return logged_in, game_id, get_game(app, game_id).code

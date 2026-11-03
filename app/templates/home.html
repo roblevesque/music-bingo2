@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Music Bingo{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>Join a game</h1>
+  <p class="muted">Enter the code shown by your host and choose a team name.</p>
+  {% include "_join_form.html" %}
+  <p class="muted">Hosting a game? <a href="/login">Host log in</a></p>
+</section>
+{% endblock %}

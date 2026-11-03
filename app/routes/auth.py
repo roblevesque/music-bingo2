@@ -41,7 +41,9 @@ def _start_session(request: Request, user: User) -> None:
 def index(request: Request, session: Session = Depends(get_session)):
     if request.session.get("user_id"):
         return _redirect("/library")
-    return _redirect("/login" if _has_users(session) else "/setup")
+    if not _has_users(session):
+        return _redirect("/setup")
+    return render(request, "home.html")
 
 
 @router.get("/setup")

@@ -10,7 +10,7 @@ from starlette.concurrency import run_in_threadpool
 
 from app.db import get_session
 from app.deps import require_user
-from app.models import Game, GameSong, Round, Song, Ticket, User
+from app.models import Claim, Game, GameSong, Round, Song, Team, Ticket, User
 from app.security import check_csrf
 from app.services.patterns import MODE_FULL_HOUSE, MODE_LINES, RoundRules, describe_rules, validate_rules
 from app.services.ticket_gen import TicketGenerationError, generate_tickets
@@ -165,6 +165,7 @@ def game_detail(
     rounds = session.exec(select(Round).where(Round.game_id == game.id).order_by(Round.number)).all()
     ticket_numbers = session.exec(select(Ticket.number).where(Ticket.game_id == game.id).order_by(Ticket.number)).all()
     song_count = session.exec(select(func.count(GameSong.song_id)).where(GameSong.game_id == game.id)).one()
+    team_count = session.exec(select(func.count(Team.id)).where(Team.game_id == game.id)).one()
     return render(
         request,
         "game.html",
@@ -173,6 +174,7 @@ def game_detail(
         rounds=[(r, describe_rules(r.rules(), game.grid_size)) for r in rounds],
         ticket_numbers=ticket_numbers,
         song_count=song_count,
+        team_count=team_count,
         max_lines=2 * game.grid_size + 2,
     )
 
@@ -187,7 +189,7 @@ def delete_game(
 ):
     check_csrf(request, csrf_token)
     game = owned_game(session, user, game_id)
-    for model in (Ticket, Round, GameSong):
+    for model in (Claim, Team, Ticket, Round, GameSong):  # children first
         session.execute(delete(model).where(model.game_id == game.id))
     session.delete(game)
     session.commit()
@@ -198,7 +200,7 @@ def delete_game(
 # ---------------------------------------------------------------- rounds
 
 
-def _parse_rules(game: Game, mode: str, lines_required: str, rows: bool, columns: bool, diagonals: bool):
+def parse_rules(game: Game, mode: str, lines_required: str, rows: bool, columns: bool, diagonals: bool):
     errors: list[str] = []
     try:
         required = int(lines_required)
@@ -229,7 +231,7 @@ def add_round(
 ):
     check_csrf(request, csrf_token)
     game = owned_game(session, user, game_id)
-    rules, errors = _parse_rules(game, mode, lines_required, rows, columns, diagonals)
+    rules, errors = parse_rules(game, mode, lines_required, rows, columns, diagonals)
     if errors:
         flash(request, errors[0], "error")
         return _redirect(f"/games/{game.id}")
@@ -277,7 +279,7 @@ def update_round(
     check_csrf(request, csrf_token)
     game = owned_game(session, user, game_id)
     target = _owned_round(session, game, round_id)
-    rules, errors = _parse_rules(game, mode, lines_required, rows, columns, diagonals)
+    rules, errors = parse_rules(game, mode, lines_required, rows, columns, diagonals)
     if errors:
         flash(request, errors[0], "error")
         return _redirect(f"/games/{game.id}")
@@ -303,6 +305,9 @@ def delete_round(
     check_csrf(request, csrf_token)
     game = owned_game(session, user, game_id)
     target = _owned_round(session, game, round_id)
+    if game.status != "draft" and target.number <= game.current_round:
+        flash(request, "Rounds that have been played, or are being played, can't be deleted.", "error")
+        return _redirect(f"/games/{game.id}")
     rounds = session.exec(select(Round).where(Round.game_id == game.id).order_by(Round.number)).all()
     if len(rounds) <= 1:
         flash(request, "A game needs at least one round.", "error")

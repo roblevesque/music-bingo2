@@ -88,3 +88,15 @@ details.round summary { cursor: pointer; }
   min-height: 5rem; padding: 0.4rem; border: 1px solid var(--border); border-radius: 6px;
   background: var(--surface); font-size: 0.85rem; overflow-wrap: anywhere; }
 .square span { color: var(--muted); font-size: 0.75rem; }
+
+/* ---- phase 3: play ---- */
+button.secondary { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+button.secondary.danger { color: var(--danger); border-color: var(--danger); }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+button.big { width: 100%; padding: 1rem; font-size: 1.4rem; font-weight: 700; }
+button.square { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 6px; }
+button.square.marked { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+button.square.marked span { color: inherit; opacity: 0.85; }
+ul.plain, ol.plain { padding-left: 1.2rem; margin: 0; }
+li.win { font-weight: 700; color: var(--accent); }
+li.rejected { color: var(--muted); }

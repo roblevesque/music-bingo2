@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Console &middot; {{ game.name }}{% endblock %}
+{% block content %}
+<div id="console" data-game="{{ game.id }}" data-csrf="{{ csrf_token }}">
+  <p><a href="/games/{{ game.id }}">&larr; {{ game.name }}</a></p>
+  <div class="row spread"><h1>Host console</h1><span id="connection" class="muted"></span></div>
+  <p id="console-error" class="flash error" role="alert" hidden></p>
+
+  <section class="card">
+    <p>Join code <strong class="code" id="join-code"></strong></p>
+    <p class="muted">Players open <span id="join-url"></span> or enter the code on the home page.
+      <span id="teams-count"></span></p>
+    <div class="row">
+      <button id="btn-start" type="button">Start game</button>
+      <button id="btn-next" type="button">Next song</button>
+      <button id="btn-replay" type="button" class="secondary">Replay</button>
+      <button id="btn-pause" type="button" class="secondary">Pause</button>
+      <button id="btn-skip" type="button" class="secondary">Skip next</button>
+      <button id="btn-reshuffle" type="button" class="secondary">Reshuffle remaining</button>
+      <button id="btn-finish" type="button" class="secondary danger">End game</button>
+    </div>
+    <audio id="host-audio" preload="auto"></audio>
+    <audio id="preload-audio" preload="auto" hidden></audio>
+  </section>
+
+  <section class="card">
+    <h2>Now playing</h2>
+    <p><strong id="now-title">Nothing yet</strong> <span id="now-artist" class="muted"></span></p>
+    <p class="muted" id="progress"></p>
+    <p class="muted">Up next (only you can see this): <span id="next-title">&mdash;</span></p>
+  </section>
+
+  <section class="card">
+    <h2>Round</h2>
+    <p id="round-text"></p>
+    <p class="row"><button id="btn-next-round" type="button">Next round</button>
+      <span class="muted" id="winners-text"></span></p>
+
+    <details class="round">
+      <summary>Change what counts as a win</summary>
+      <form id="rules-form" class="stack">
+        <label>Round
+          <select id="rule-round" name="round_id"></select>
+        </label>
+        <label>Name <input name="name" maxlength="60"></label>
+        <label>Wins with
+          <select name="mode">
+            <option value="lines">Lines</option>
+            <option value="full_house">Full house</option>
+          </select>
+        </label>
+        <label>Lines needed <input name="lines_required" type="number" min="1" value="1"></label>
+        <fieldset>
+          <legend class="muted">Line types that count</legend>
+          <label class="check"><input type="checkbox" name="rows"> Rows</label>
+          <label class="check"><input type="checkbox" name="columns"> Columns</label>
+          <label class="check"><input type="checkbox" name="diagonals"> Diagonals</label>
+        </fieldset>
+        <div class="row">
+          <button type="submit">Save rules for this round</button>
+          <button type="button" id="btn-add-round" class="secondary">Add as a new round</button>
+        </div>
+      </form>
+    </details>
+  </section>
+
+  <section class="card">
+    <h2>Claims this round</h2>
+    <ul id="claims" class="plain"><li class="muted">No claims yet.</li></ul>
+  </section>
+
+  <section class="card">
+    <h2>Check a printed ticket</h2>
+    <form id="check-form" class="row">
+      <label>Ticket number <input name="ticket_number" type="number" min="1" required></label>
+      <button type="submit">Check</button>
+    </form>
+    <p id="check-result" class="flash" hidden></p>
+  </section>
+
+  <section class="card">
+    <h2>Teams</h2>
+    <ul id="teams" class="plain"><li class="muted">Nobody has joined yet.</li></ul>
+  </section>
+
+  <section class="card">
+    <h2>Played so far</h2>
+    <ol id="played" class="plain"></ol>
+  </section>
+</div>
+<script type="application/json" id="initial-state">{{ state|tojson }}</script>
+{% endblock %}
+{% block scripts %}<script type="module" src="{{ url_for('static', path='console.js') }}"></script>{% endblock %}

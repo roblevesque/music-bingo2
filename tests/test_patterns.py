@@ -4,6 +4,7 @@ from app.services.patterns import (
     MODE_FULL_HOUSE,
     RoundRules,
     all_lines,
+    describe_line,
     describe_rules,
     enabled_lines,
     validate_rules,
@@ -50,3 +51,11 @@ def test_describe_rules():
         == "1 line (rows, columns or diagonals)"
     )
     assert describe_rules(RoundRules(mode=MODE_FULL_HOUSE), 5) == "Full house (every square)"
+
+
+def test_describe_line():
+    lines = {(l.kind, l.index): l for l in all_lines(5, rows=True, columns=True, diagonals=True)}
+    assert describe_line(lines[("row", 1)]) == "row 2"
+    assert describe_line(lines[("column", 4)]) == "column 5"
+    assert describe_line(lines[("diagonal", 0)]).startswith("diagonal (top-left")
+    assert describe_line(lines[("diagonal", 1)]).startswith("diagonal (top-right")

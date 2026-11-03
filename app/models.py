@@ -1,7 +1,7 @@
 """Database models.
 
 Phase 1: hosts and their song library. Phase 2: games, ticket pools, tickets and rounds.
-Players (teams) and claims arrive in phase 3.
+Phase 3: teams (players) and claims.
 """
 
 from datetime import datetime, timezone
@@ -51,7 +51,8 @@ class Game(SQLModel, table=True):
     grid_size: int = 5  # tickets are grid_size x grid_size
     # Phase 3 play state, created now so the table won't need altering later.
     play_order: list[int] = Field(default_factory=list, sa_column=Column(JSON))
-    current_index: int = 0
+    current_index: int = 0  # how many songs have been played: the played songs are play_order[:current_index]
+    current_round: int = 1  # Round.number the host is currently running
     created_at: datetime = Field(default_factory=utcnow)
 
 
@@ -93,3 +94,31 @@ class Round(SQLModel, table=True):
             columns=self.columns,
             diagonals=self.diagonals,
         )
+
+
+class Team(SQLModel, table=True):
+    """A joined player. Teams have no account: a signed cookie remembers which team a browser is."""
+
+    __table_args__ = (UniqueConstraint("game_id", "name_key"), UniqueConstraint("ticket_id"))
+
+    id: int | None = Field(default=None, primary_key=True)
+    game_id: int = Field(foreign_key="game.id", index=True)
+    ticket_id: int = Field(foreign_key="ticket.id")
+    name: str = Field(max_length=30)
+    name_key: str = Field(max_length=30)  # case-folded name, for uniqueness within a game
+    marks: list[int] = Field(default_factory=list, sa_column=Column(JSON))  # squares the team has tapped
+    created_at: datetime = Field(default_factory=utcnow)
+
+
+class Claim(SQLModel, table=True):
+    """A team calling bingo. Only decided claims are stored ("win" or "rejected")."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    game_id: int = Field(foreign_key="game.id", index=True)
+    team_id: int = Field(foreign_key="team.id", index=True)
+    round_number: int  # a snapshot, so later edits to rounds don't rewrite history
+    round_name: str = ""
+    status: str  # "win" or "rejected"
+    songs_played: int  # songs played when the claim arrived; equal values are ties
+    detail: str = ""  # for the host: which lines were complete, or how far short it was
+    created_at: datetime = Field(default_factory=utcnow)

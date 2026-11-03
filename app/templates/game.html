@@ -34,7 +34,9 @@
 <section class="card">
   <p>Join code <strong class="code">{{ game.code }}</strong></p>
   <p class="muted">{{ game.grid_size }}&times;{{ game.grid_size }} tickets &middot;
-    {{ ticket_numbers|length }} tickets &middot; {{ song_count }} songs in the pool &middot; status: {{ game.status }}</p>
+    {{ ticket_numbers|length }} tickets &middot; {{ song_count }} songs in the pool &middot;
+    {{ team_count }} team{{ '' if team_count == 1 else 's' }} joined &middot; status: {{ game.status }}</p>
+  <p><a class="button" href="/games/{{ game.id }}/run">{% if game.status == 'draft' %}Open host console{% else %}Back to host console{% endif %}</a></p>
 </section>
 
 <section class="card">

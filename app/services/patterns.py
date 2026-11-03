@@ -74,3 +74,10 @@ def describe_rules(rules: RoundRules, size: int) -> str:
     ]
     count = rules.lines_required
     return f"{count} line{'' if count == 1 else 's'} ({_join_or(kinds) if kinds else 'none'})"
+
+
+def describe_line(line: Line) -> str:
+    """'row 2', 'column 4', 'diagonal (top-left to bottom-right)' for showing to the host."""
+    if line.kind == "diagonal":
+        return "diagonal (top-left to bottom-right)" if line.index == 0 else "diagonal (top-right to bottom-left)"
+    return f"{line.kind} {line.index + 1}"

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}{{ game.name }} &middot; {{ team.name }}{% endblock %}
+{% block content %}
+<section id="play" data-code="{{ game.code }}" data-csrf="{{ csrf_token }}">
+  <h1>{{ game.name }}</h1>
+  <p class="muted">Team <strong>{{ team.name }}</strong> &middot; ticket {{ ticket.number }}</p>
+
+  <p id="banner" class="flash info" aria-live="polite"></p>
+  <p id="progress" class="muted"></p>
+
+  <div class="ticket" style="grid-template-columns: repeat({{ size }}, 1fr);">
+    {% for cell in cells %}
+    <button type="button" class="square mark{% if cell.marked %} marked{% endif %}" data-pos="{{ cell.pos }}"
+            aria-pressed="{{ 'true' if cell.marked else 'false' }}">
+      <strong>{{ cell.title }}</strong><span>{{ cell.artist }}</span>
+    </button>
+    {% endfor %}
+  </div>
+
+  <p><button id="bingo" type="button" class="big" disabled>Bingo!</button></p>
+  <p id="claim-result" class="flash" role="status" hidden></p>
+
+  <section class="card">
+    <h2>Winners</h2>
+    <ul id="winners"><li class="muted">No winners yet.</li></ul>
+  </section>
+  <p id="connection" class="muted"></p>
+</section>
+<script type="application/json" id="initial-state">{{ state|tojson }}</script>
+{% endblock %}
+{% block scripts %}<script type="module" src="{{ url_for('static', path='play.js') }}"></script>{% endblock %}

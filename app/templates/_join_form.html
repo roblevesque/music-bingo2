@@ -1,0 +1,13 @@
+{% for error in errors %}<p class="flash error">{{ error }}</p>{% endfor %}
+<form method="post" action="/join">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <label>Game code
+    <input name="code" value="{{ code }}" maxlength="12" autocapitalize="characters" autocomplete="off"
+           spellcheck="false" required {% if not code %}autofocus{% endif %}>
+  </label>
+  <label>Team name
+    <input name="team_name" value="{{ team_name }}" minlength="2" maxlength="30" autocomplete="off"
+           required {% if code %}autofocus{% endif %}>
+  </label>
+  <button type="submit">Join game</button>
+</form>
