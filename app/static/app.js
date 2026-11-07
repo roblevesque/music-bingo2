@@ -93,3 +93,12 @@ function setupSongPicker() {
 }
 
 setupSongPicker();
+
+// Error pages: <a href="/" data-back>Go back</a> returns to the previous page when there is one.
+document.addEventListener("click", (event) => {
+  const link = event.target.closest?.("[data-back]");
+  if (link && window.history.length > 1) {
+    event.preventDefault();
+    window.history.back();
+  }
+});

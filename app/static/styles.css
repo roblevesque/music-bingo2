@@ -100,3 +100,30 @@ button.square.marked span { color: inherit; opacity: 0.85; }
 ul.plain, ol.plain { padding-left: 1.2rem; margin: 0; }
 li.win { font-weight: 700; color: var(--accent); }
 li.rejected { color: var(--muted); }
+
+/* ---- phase 4: connection status and small screens ---- */
+#connection.warn { color: var(--danger); font-weight: 600; }
+.sticky-action { position: sticky; bottom: 0; z-index: 5; padding: 0.5rem 0 calc(0.5rem + env(safe-area-inset-bottom));
+  background: linear-gradient(to top, var(--bg) 75%, transparent); }
+.row label { min-width: min(12rem, 100%); }
+
+@media (max-width: 640px) {
+  main { padding: 0.6rem; }
+  h1 { font-size: 1.35rem; }
+  .card { padding: 0.75rem; }
+  .topbar { flex-wrap: wrap; gap: 0.3rem 0.8rem; }
+  .hide-sm { display: none; }
+  th, td { padding: 0.4rem 0.35rem; }
+  button, a.button, select, input[type=number] { min-height: 44px; }
+  .row > button, .row > a.button { flex: 1 1 9rem; }
+  .code { font-size: 1.3rem; }
+
+  .ticket { gap: 3px; }
+  .square { min-height: 3.8rem; padding: 0.2rem; font-size: 0.72rem; }
+  .square span { font-size: 0.62rem; }
+  .ticket[data-size="7"] .square, .ticket[data-size="8"] .square, .ticket[data-size="9"] .square {
+    min-height: 3rem; font-size: 0.55rem; }
+  .ticket[data-size="7"] .square span, .ticket[data-size="8"] .square span, .ticket[data-size="9"] .square span {
+    font-size: 0.5rem; }
+}
+.row + .row { margin-top: 0.75rem; }

@@ -19,6 +19,14 @@
       <button id="btn-reshuffle" type="button" class="secondary">Reshuffle remaining</button>
       <button id="btn-finish" type="button" class="secondary danger">End game</button>
     </div>
+    <div class="row">
+      <label class="check"><input type="checkbox" id="auto-next"> Play the next song automatically</label>
+      <label>Wait (seconds) after each clip
+        <input type="number" id="auto-seconds" min="0" max="120" step="1" value="10"></label>
+      <label>Fade in and out (seconds, 0 = off)
+        <input type="number" id="fade-seconds" min="0" max="10" step="0.5" value="0"></label>
+    </div>
+    <p id="auto-status" class="muted" aria-live="polite"></p>
     <audio id="host-audio" preload="auto"></audio>
     <audio id="preload-audio" preload="auto" hidden></audio>
   </section>

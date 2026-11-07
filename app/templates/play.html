@@ -8,7 +8,7 @@
   <p id="banner" class="flash info" aria-live="polite"></p>
   <p id="progress" class="muted"></p>
 
-  <div class="ticket" style="grid-template-columns: repeat({{ size }}, 1fr);">
+  <div class="ticket" data-size="{{ size }}" style="grid-template-columns: repeat({{ size }}, 1fr);">
     {% for cell in cells %}
     <button type="button" class="square mark{% if cell.marked %} marked{% endif %}" data-pos="{{ cell.pos }}"
             aria-pressed="{{ 'true' if cell.marked else 'false' }}">
@@ -17,7 +17,7 @@
     {% endfor %}
   </div>
 
-  <p><button id="bingo" type="button" class="big" disabled>Bingo!</button></p>
+  <div class="sticky-action"><button id="bingo" type="button" class="big" disabled>Bingo!</button></div>
   <p id="claim-result" class="flash" role="status" hidden></p>
 
   <section class="card">

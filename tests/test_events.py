@@ -61,7 +61,7 @@ def test_unsubscribe_stops_delivery_and_cleans_up():
     run(scenario())
 
 
-def test_stream_sends_initial_then_live_events_then_keepalives():
+def test_stream_sends_initial_then_live_events_then_pings():
     async def scenario():
         hub = Hub()
         sub = hub.subscribe(1, "players")
@@ -69,6 +69,6 @@ def test_stream_sends_initial_then_live_events_then_keepalives():
         assert (await anext(chunks)).startswith("event: state")
         hub.publish(1, "players", Event("state", {"n": 1}))
         assert '"n":1' in await anext(chunks)
-        assert await anext(chunks) == ": keepalive\n\n"
+        assert await anext(chunks) == "event: ping\ndata: {}\n\n"  # a real event, so browsers can see it
         await chunks.aclose()
     run(scenario())

@@ -13,6 +13,12 @@ templates = Jinja2Templates(directory=BASE_DIR / "templates")
 templates.env.filters["clock"] = format_time_ms
 
 
+def error_page(request: Request, status_code: int, title: str, message: str):
+    """A friendly error page. Deliberately doesn't touch the session, so it is safe anywhere."""
+    context = {"user": None, "csrf_token": "", "flashes": [], "title": title, "message": message}
+    return templates.TemplateResponse(request, "error.html", context, status_code=status_code)
+
+
 def flash(request: Request, message: str, kind: str = "info") -> None:
     """Queue a one-shot message for the next page. Kept short: it lives in the cookie."""
     queue = request.session.setdefault("_flash", [])

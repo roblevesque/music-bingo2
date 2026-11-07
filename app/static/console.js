@@ -1,4 +1,7 @@
 // Host console: drives the game and plays each song's clip window in this browser.
+import { connectLive, statusText } from "./live.js";
+import { clampNumber, fadeVolume } from "./playback.js";
+
 const root = document.querySelector("#console");
 
 if (root) {
@@ -11,12 +14,36 @@ if (root) {
   const pauseButton = $("#btn-pause");
   const ruleRound = $("#rule-round");
   const rulesForm = $("#rules-form");
+  const autoBox = $("#auto-next");
+  const autoSeconds = $("#auto-seconds");
+  const fadeSeconds = $("#fade-seconds");
+  const autoStatus = $("#auto-status");
 
   let state = JSON.parse(document.querySelector("#initial-state").textContent);
   let playing = null; // the song whose start/end window is playing
   let preloaded = "";
   let formRound = null; // round number the rules form shows
   let formSignature = ""; // what the server last said that round contains
+  let countdownTimer = null; // running while we wait to play the next song automatically
+  let autoHold = false; // a team has called a valid bingo: don't auto-play until the host moves on
+  let windowStop = false; // we paused the audio ourselves at the end of the clip window
+  let knownClaims = new Set(state.claims.map((c) => c.id));
+
+  // Playback settings are remembered in this browser (they belong to the host's setup, not the game).
+  const SETTINGS_KEY = "musicbingo.console";
+  try {
+    const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
+    autoBox.checked = Boolean(saved.auto);
+    autoSeconds.value = clampNumber(saved.autoSeconds, 0, 120, 10);
+    fadeSeconds.value = clampNumber(saved.fade, 0, 10, 0);
+  } catch { /* storage unavailable: keep the defaults in the page */ }
+  const saveSettings = () => {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+        auto: autoBox.checked, autoSeconds: autoSeconds.value, fade: fadeSeconds.value,
+      }));
+    } catch { /* ignore */ }
+  };
 
   const el = (tag, text, className) => {
     const node = document.createElement(tag);
@@ -63,11 +90,73 @@ if (root) {
       audio.load();
     }
   }
+
+  // Every 50 ms: apply the fade curve, and stop at the end of the saved window.
   setInterval(() => {
-    if (playing && playing.end_ms && !audio.paused && audio.currentTime * 1000 >= playing.end_ms) audio.pause();
-  }, 100);
+    if (!playing || audio.paused) return;
+    const start = (playing.start_ms || 0) / 1000;
+    const end = playing.end_ms ? playing.end_ms / 1000 : audio.duration;
+    audio.volume = fadeVolume(audio.currentTime, start, end, clampNumber(fadeSeconds.value, 0, 10, 0));
+    if (playing.end_ms && audio.currentTime >= end) {
+      windowStop = true;
+      audio.pause();
+      onClipFinished();
+    }
+  }, 50);
   audio.addEventListener("play", () => { pauseButton.textContent = "Pause"; });
-  audio.addEventListener("pause", () => { pauseButton.textContent = "Resume"; });
+  audio.addEventListener("pause", () => {
+    pauseButton.textContent = "Resume";
+    if (windowStop) windowStop = false; // the clip ended by itself; keep the countdown going
+    else cancelCountdown(); // the host paused: don't start the next song behind their back
+  });
+  audio.addEventListener("ended", onClipFinished);
+
+  // ---- automatic next song
+  function setAutoStatus(text) { autoStatus.textContent = text; }
+  function cancelCountdown() {
+    clearInterval(countdownTimer);
+    countdownTimer = null;
+    if (!autoHold) setAutoStatus("");
+  }
+  function startCountdown() {
+    const exhausted = state.songs_played >= state.total_songs;
+    if (!autoBox.checked || autoHold || state.game.status !== "active" || exhausted) return;
+    const due = Date.now() + clampNumber(autoSeconds.value, 0, 120, 10) * 1000;
+    clearInterval(countdownTimer);
+    const tick = () => {
+      const left = Math.ceil((due - Date.now()) / 1000);
+      if (left <= 0) { cancelCountdown(); advance(); }
+      else setAutoStatus(`Next song in ${left}s. Press Pause to stop auto-play.`);
+    };
+    countdownTimer = setInterval(tick, 250);
+    tick();
+  }
+  function onClipFinished() { if (playing) startCountdown(); }
+
+  async function advance() {
+    cancelCountdown();
+    autoHold = false;
+    setAutoStatus("");
+    const data = await post("next");
+    if (data) { playSong(data.current_song); render(data); }
+  }
+
+  // A valid bingo holds auto-play so the host can check it; "Next song" resumes it.
+  function noteNewWins(next) {
+    const fresh = next.claims.filter((c) => !knownClaims.has(c.id));
+    knownClaims = new Set(next.claims.map((c) => c.id));
+    if (fresh.some((c) => c.status === "win")) {
+      autoHold = true;
+      clearInterval(countdownTimer);
+      countdownTimer = null;
+      if (autoBox.checked) setAutoStatus("Auto-play is on hold: a team called bingo. Press Next song to continue.");
+    }
+  }
+  [autoBox, autoSeconds, fadeSeconds].forEach((input) => input.addEventListener("change", () => {
+    saveSettings();
+    if (!autoBox.checked) { autoHold = false; cancelCountdown(); }
+    if (input === fadeSeconds && audio.paused) audio.volume = 1;
+  }));
 
   // ---- drawing the state
   function fillRulesForm(round) {
@@ -99,6 +188,8 @@ if (root) {
 
   function render(next) {
     state = next;
+    noteNewWins(next);
+    if (next.game.status !== "active") cancelCountdown();
     const { game, round } = state;
     const draft = game.status === "draft";
     const active = game.status === "active";
@@ -156,11 +247,8 @@ if (root) {
     const data = await post("start");
     if (data) render(data);
   });
-  $("#btn-next").addEventListener("click", async () => {
-    const data = await post("next");
-    if (data) { playSong(data.current_song); render(data); }
-  });
-  $("#btn-replay").addEventListener("click", () => playSong(state.current_song));
+  $("#btn-next").addEventListener("click", advance);
+  $("#btn-replay").addEventListener("click", () => { cancelCountdown(); playSong(state.current_song); });
   pauseButton.addEventListener("click", () => { if (audio.paused) audio.play(); else audio.pause(); });
   $("#btn-skip").addEventListener("click", async () => { const d = await post("skip"); if (d) render(d); });
   $("#btn-reshuffle").addEventListener("click", async () => { const d = await post("reshuffle"); if (d) render(d); });
@@ -171,7 +259,7 @@ if (root) {
   });
   $("#btn-next-round").addEventListener("click", async () => {
     const d = await post("round", { number: state.round.number + 1 });
-    if (d) { formRound = null; render(d); }
+    if (d) { formRound = null; autoHold = false; setAutoStatus(""); render(d); }
   });
 
   // ---- rules: change what counts as a win, now or for a later round
@@ -213,10 +301,13 @@ if (root) {
   });
 
   // ---- live updates
-  const source = new EventSource(`/games/${gameId}/run/events`);
-  source.addEventListener("state", (event) => render(JSON.parse(event.data)));
-  source.onopen = () => { $("#connection").textContent = "Live"; };
-  source.onerror = () => { $("#connection").textContent = "Reconnecting\u2026"; };
+  connectLive(`/games/${gameId}/run/events`, {
+    onState: render,
+    onStatus: (name) => {
+      $("#connection").textContent = statusText(name);
+      $("#connection").classList.toggle("warn", name !== "live");
+    },
+  });
 
   render(state);
 }

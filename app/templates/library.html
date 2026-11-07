@@ -24,20 +24,20 @@
   <div class="scroll">
   <table>
     <thead>
-      <tr><th>Title</th><th>Artist</th><th>Tags</th><th>Play window</th><th>Length</th><th></th></tr>
+      <tr><th>Title</th><th>Artist</th><th class="hide-sm">Tags</th><th>Play window</th><th class="hide-sm">Length</th><th></th></tr>
     </thead>
     <tbody>
     {% for song in songs %}
       <tr>
         <td>{{ song.title }}</td>
         <td>{{ song.artist }}</td>
-        <td>{% for tag in song.tag_list %}<span class="tag">{{ tag }}</span> {% endfor %}</td>
+        <td class="hide-sm">{% for tag in song.tag_list %}<span class="tag">{{ tag }}</span> {% endfor %}</td>
         <td>
           {% if song.start_ms or song.end_ms %}
             {{ song.start_ms|clock }} &ndash; {{ song.end_ms|clock if song.end_ms else 'end' }}
           {% else %}<span class="muted">full track</span>{% endif %}
         </td>
-        <td>{{ song.duration_ms|clock if song.duration_ms else '' }}</td>
+        <td class="hide-sm">{{ song.duration_ms|clock if song.duration_ms else '' }}</td>
         <td class="actions">
           <a href="/library/{{ song.id }}/edit">Edit</a>
           <form method="post" action="/library/{{ song.id }}/delete" class="inline"

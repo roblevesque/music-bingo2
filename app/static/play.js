@@ -1,4 +1,6 @@
 // Player page: tap squares to mark, call bingo, and follow the game live.
+import { connectLive, statusText } from "./live.js";
+
 const root = document.querySelector("#play");
 
 if (root) {
@@ -85,8 +87,11 @@ if (root) {
 
   render(JSON.parse(document.querySelector("#initial-state").textContent));
 
-  const source = new EventSource(`/play/${code}/events`);
-  source.addEventListener("state", (event) => render(JSON.parse(event.data)));
-  source.onopen = () => { connection.textContent = "Live"; };
-  source.onerror = () => { connection.textContent = "Reconnecting\u2026"; };
+  connectLive(`/play/${code}/events`, {
+    onState: render,
+    onStatus: (name) => {
+      connection.textContent = statusText(name);
+      connection.classList.toggle("warn", name !== "live");
+    },
+  });
 }

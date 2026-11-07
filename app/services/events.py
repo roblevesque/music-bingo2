@@ -84,6 +84,6 @@ async def stream(sub: Subscription, initial: Iterable[Event] = (), keepalive: fl
         try:
             event = await asyncio.wait_for(sub.queue.get(), timeout=keepalive)
         except asyncio.TimeoutError:
-            yield ": keepalive\n\n"
+            yield format_sse(Event("ping", {}))  # comments are invisible to EventSource; events are not
             continue
         yield format_sse(event)
