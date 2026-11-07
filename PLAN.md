@@ -59,12 +59,14 @@ uvicorn app.main:app --reload
 - [ ] Progressive game play (Each time a player wins, host can set the winable patterns for use when checking the next ticket. For instance, First Round: 1 line, Second Round: Two or more lines, Third round: Full house)
 
 ### Later
+- [ ] Ticket branding via web interface
+- [ ] Remaining playlist visible from host console, not just next up
+- [ ] Related to above perhaps, but host console more completely and effectively using screen real estate
 - [ ] Game import/export
-- [ ] Players join with game code and display name (no account)
 - [ ] Permissions model to allow some users to add more users, or deny others the abillity to create games
 - [ ] Host triggerable sfx events. For example, 'thinking' music while checking tickets, win and lose sfx. 
 - [ ] Pre and post game music playing. Possibly from commercial service, or from pool of music already available. 
-- [ ] Host remote. Allow host to pause music, trigger events from mobile device.
+- [ ] Host remote. Allow host to pause music, trigger events from mobile device
 
 ---
 
@@ -148,30 +150,30 @@ musicbingo/
 ## 8. Roadmap
 
 ### Phase 1: Foundation
-- [ ] Project skeleton, config, dependencies
-- [ ] DB models and setup
-- [ ] Host login and sessions
-- [ ] Song library with upload
+- [X] Project skeleton, config, dependencies
+- [X] DB models and setup
+- [X] Host login and sessions
+- [X] Song library with upload
 
 ### Phase 2: Game Engine
-- [ ] Ticket generator with tests
-- [ ] Claim checker with tests
-- [ ] Game creation UI
+- [X] Ticket generator with tests
+- [X] Claim checker with tests
+- [X] Game creation UI
 
 ### Phase 3: Play Loop
-- [ ] Player join flow
-- [ ] Player ticket view with marking
-- [ ] Host console
-- [ ] SSE event stream
-- [ ] Claim flow and verification
+- [X] Player join flow
+- [X] Player ticket view with marking
+- [X] Host console
+- [X] SSE event stream
+- [X] Claim flow and verification
 
 ### Phase 4: Print and Polish
-- [ ] Printable tickets
-- [ ] Mobile-friendly CSS
-- [ ] Error handling and reconnect logic
-- [ ] Automaticly play next song after x seconds
-- [ ] Fade in / fade out song sections
-- [ ] Game restart / reuse (with new join code)
+- [X] Printable tickets
+- [X] Mobile-friendly CSS
+- [X] Error handling and reconnect logic
+- [X] Automaticly play next song after x seconds
+- [X] Fade in / fade out song sections
+- [X] Game restart / reuse (with new join code)
 
 ### Phase 5: Deploy
 - [ ] Dockerfile
