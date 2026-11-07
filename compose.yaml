@@ -1,0 +1,16 @@
+services:
+  musicbingo:
+    build: .
+    image: musicbingo:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - bingo-data:/data        # database, clips and the session key survive rebuilds
+    environment:
+      MUSICBINGO_HTTPS_ONLY: "0"   # set to "1" only when served over HTTPS
+      # MUSICBINGO_MAX_UPLOAD_MB: "50"
+      # FORWARDED_ALLOW_IPS: "*"   # only if a trusted reverse proxy sits in front, so join links use its host and scheme
+    restart: unless-stopped
+
+volumes:
+  bingo-data:

@@ -177,7 +177,7 @@ musicbingo/
 
 ### Phase 5: Deploy
 - [ ] Dockerfile
-- [ ] README with setup instructions
+- [X] README with setup instructions
 - [ ] Backup guidance for `data/`
 
 ### Phase 6: Extras

@@ -94,3 +94,20 @@ def generate_tickets(
         tickets.append(grid)
 
     return GeneratedTickets(tickets=tickets, min_difference=level)
+
+
+def variety_target(size: int) -> int:
+    """Two tickets should differ in at least a fifth of their squares (share at most ~80% of songs)."""
+    return (size * size) // 5
+
+
+def variety_warning(min_difference: int, size: int) -> str | None:
+    """A message for the host if the tickets ended up closer together than the 80% rule, else None."""
+    target = variety_target(size)
+    if min_difference >= target:
+        return None
+    return (
+        f"Some tickets share more than 80% of their songs: any two tickets differ by at least "
+        f"{min_difference} of {size * size} squares, and the aim is {target}. A bigger song pool "
+        f"(about twice the number of squares on a ticket, or more) gives more varied tickets."
+    )

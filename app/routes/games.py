@@ -16,7 +16,7 @@ from app.security import check_csrf
 from app.services.series import latest_runs, series_key
 from app.services.pdf import PAPER_SIZES, TICKETS_PER_PAGE, build_tickets_pdf, load_fonts
 from app.services.patterns import MODE_FULL_HOUSE, MODE_LINES, RoundRules, describe_rules, validate_rules
-from app.services.ticket_gen import TicketGenerationError, generate_tickets
+from app.services.ticket_gen import TicketGenerationError, generate_tickets, variety_warning
 from app.web import flash, render
 
 router = APIRouter(prefix="/games")
@@ -153,8 +153,9 @@ async def new_game_submit(
 
     message = f"Created \u201c{name}\u201d with {count} tickets. Any two tickets differ by at least {generated.min_difference} song(s)."
     flash(request, message, "success")
-    if generated.min_difference == 1:
-        flash(request, "The song pool is small for this ticket size, so some tickets are very similar. Add songs for more variety.", "info")
+    warning = variety_warning(generated.min_difference, size)
+    if warning:
+        flash(request, warning, "info")
     return _redirect(f"/games/{game.id}")
 
 
@@ -424,6 +425,7 @@ def rerun_game(
     ).one() or 1
     pool = list(session.exec(select(GameSong.song_id).where(GameSong.game_id == source.id)).all())
     old_tickets = session.exec(select(Ticket).where(Ticket.game_id == source.id).order_by(Ticket.number)).all()
+    warning = None
     if regenerate:
         try:
             generated = generate_tickets(pool, source.grid_size, len(old_tickets))
@@ -431,6 +433,7 @@ def rerun_game(
             flash(request, str(exc), "error")
             return _redirect(f"/games/{source.id}")
         tickets = list(enumerate(generated.tickets, start=1))
+        warning = variety_warning(generated.min_difference, source.grid_size)
     else:
         tickets = [(t.number, list(t.cells)) for t in old_tickets]
 
@@ -450,5 +453,7 @@ def rerun_game(
     session.commit()
 
     how = "with new tickets" if regenerate else "with the same tickets, so printed copies still work"
+    if warning:
+        flash(request, warning, "info")
     flash(request, f"Run {game.run_number} of \u201c{game.name}\u201d is ready {how}. New join code: {game.code}", "success")
     return _redirect(f"/games/{game.id}")

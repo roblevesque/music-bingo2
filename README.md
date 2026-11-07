@@ -68,14 +68,14 @@ All optional, set as environment variables.
 | `MUSICBINGO_PDF_FONT` | built-in font | Path to a `.ttf` so printed tickets can show titles in other alphabets |
 | `MUSICBINGO_PDF_FONT_BOLD` | same as above | Optional bold `.ttf` to go with it |
 
-Back up the whole `data/` directory.
+See [Backups](#backups) for how to back up safely.
 
 ## Running a game
 
 1. **Library:** upload clips and set each song's start and end point.
 2. **Games → New game:** choose the song pool, grid size and number of tickets. Make at least as
    many tickets as you expect teams. A pool of roughly twice the number of squares per ticket gives
-   more varied tickets.
+   more varied tickets, and the app tells you when tickets end up closer than the 80% rule.
 3. **Rounds:** the game starts with one round (one line, rows only). Add more on the game page, or
    from the console during play.
 4. **Printed tickets (optional):** on the game page choose paper size and tickets per page, then
@@ -107,6 +107,42 @@ to generate new tickets instead. The games list shows each game once, as its lat
 badge such as "run 3 of 3"); earlier runs are listed on the game page. Deleting the newest run
 brings the previous one back to the list.
 
+## Docker
+
+```bash
+docker compose up --build        # http://localhost:8000
+```
+
+The compose file keeps the database, clips and session key in a named volume (`bingo-data`) so they
+survive rebuilds and upgrades. The image needs your `uv.lock` (run `uv sync` once and commit it) and
+runs a single worker as an unprivileged user. For HTTPS behind a reverse proxy, set
+`MUSICBINGO_HTTPS_ONLY=1`, and set `FORWARDED_ALLOW_IPS` to the proxy's address so join links use
+the public address. If you mount a folder from the host instead of the volume, make it writable by
+uid 10001.
+
+## Backups
+
+Don't just copy `bingo.db3` while the app is running: recent changes can still be in a side file.
+Use the built-in tool, which is safe to run mid-game:
+
+```bash
+uv run python -m app.backup create --out backups --keep 14   # timestamped .tar.gz, newest 14 kept
+uv run python -m app.backup restore backups/musicbingo-backup-<time>.tar.gz --data-dir data
+```
+
+A backup holds the database, the uploaded clips and the session key (so everyone stays logged in
+after a restore). Treat it as sensitive and copy it off the machine. Restoring into a folder that
+already has data needs `--force`, which moves the old data into a `before-restore-<time>` folder
+instead of deleting it. In Docker:
+
+```bash
+docker compose exec musicbingo python -m app.backup create --out /data/backups --keep 14
+docker compose cp musicbingo:/data/backups ./backups
+```
+
+To restore into a fresh container, copy the archive in with `docker compose cp` and run
+`python -m app.backup restore <archive> --data-dir /data --force` inside it, then restart.
+
 ## Game night checklist
 
 Before:
@@ -134,6 +170,7 @@ After:
 app/
   main.py            app factory, error pages
   config.py          settings from environment variables
+  backup.py          backup and restore (python -m app.backup)
   db.py, models.py   SQLite engine, tables, additive migrations
   security.py        password hashing, CSRF, safe redirects
   deps.py            require_user dependency
@@ -158,6 +195,7 @@ app/
   templates/         Jinja pages
   static/            styles.css and plain ES modules (app, play, console, live, playback)
 tests/
+Dockerfile, compose.yaml, .dockerignore
 ```
 
 ## Design notes
@@ -174,6 +212,7 @@ tests/
 
 - Behind a reverse proxy, set the request body limit at least as high as
   `MUSICBINGO_MAX_UPLOAD_MB`, and cap it so unauthenticated clients cannot send huge bodies.
+- Run it in Docker with the included `Dockerfile` and `compose.yaml` (see above).
 - Reverse proxies must not buffer `text/event-stream` responses (the app sends `X-Accel-Buffering: no`
   for nginx).
 - There is no login rate limiting yet; put the app behind something that provides it if it is exposed
