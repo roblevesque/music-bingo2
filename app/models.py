@@ -53,6 +53,11 @@ class Game(SQLModel, table=True):
     play_order: list[int] = Field(default_factory=list, sa_column=Column(JSON))
     current_index: int = 0  # how many songs have been played: the played songs are play_order[:current_index]
     current_round: int = 1  # Round.number the host is currently running
+    # "Run again" copies a game into a new Game in the same series. series_id is the first
+    # run's id (None if never re-run); it is deliberately not a foreign key so that deleting
+    # one run can't break the others.
+    series_id: int | None = None
+    run_number: int = 1
     created_at: datetime = Field(default_factory=utcnow)
 
 

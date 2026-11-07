@@ -219,7 +219,7 @@ def delete_song(
         select(Game.name).join(GameSong, GameSong.game_id == Game.id).where(GameSong.song_id == song.id)
     ).all()
     if used_in:
-        names = ", ".join(f"\u201c{name}\u201d" for name in used_in[:3])
+        names = ", ".join(f"\u201c{name}\u201d" for name in list(dict.fromkeys(used_in))[:3])
         flash(request, f"Can't delete \u201c{song.title}\u201d: it is in the song pool of {names}. Delete those games first.", "error")
         return _redirect("/library")
     _clip_path(request, song).unlink(missing_ok=True)

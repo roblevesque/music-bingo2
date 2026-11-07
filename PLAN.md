@@ -169,6 +169,9 @@ musicbingo/
 - [ ] Printable tickets
 - [ ] Mobile-friendly CSS
 - [ ] Error handling and reconnect logic
+- [ ] Automaticly play next song after x seconds
+- [ ] Fade in / fade out song sections
+- [ ] Game restart / reuse (with new join code)
 
 ### Phase 5: Deploy
 - [ ] Dockerfile

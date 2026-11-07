@@ -12,6 +12,8 @@ class Settings:
     max_upload_bytes: int = 50 * 1024 * 1024
     session_max_age: int = 60 * 60 * 24 * 14  # seconds
     https_only: bool = False  # set MUSICBINGO_HTTPS_ONLY=1 when served over TLS
+    pdf_font: str | None = None  # optional .ttf so printed tickets can show non-Latin titles
+    pdf_font_bold: str | None = None
 
     @property
     def db_url(self) -> str:
@@ -45,4 +47,6 @@ def load_settings() -> Settings:
         data_dir=Path(os.environ.get("MUSICBINGO_DATA_DIR", "data")).resolve(),
         max_upload_bytes=int(os.environ.get("MUSICBINGO_MAX_UPLOAD_MB", "50")) * 1024 * 1024,
         https_only=os.environ.get("MUSICBINGO_HTTPS_ONLY", "0") == "1",
+        pdf_font=os.environ.get("MUSICBINGO_PDF_FONT") or None,
+        pdf_font_bold=os.environ.get("MUSICBINGO_PDF_FONT_BOLD") or None,
     )

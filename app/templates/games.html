@@ -13,7 +13,8 @@
     <tbody>
     {% for game in games %}
       <tr>
-        <td><a href="/games/{{ game.id }}">{{ game.name }}</a></td>
+        <td><a href="/games/{{ game.id }}">{{ game.name }}</a>
+          {% if run_counts[game.id] > 1 %}<span class="tag">run {{ game.run_number }} of {{ run_counts[game.id] }}</span>{% endif %}</td>
         <td><code>{{ game.code }}</code></td>
         <td>{{ game.grid_size }}&times;{{ game.grid_size }}</td>
         <td>{{ song_counts.get(game.id, 0) }}</td>

@@ -1,10 +1,11 @@
 """Games: create from a song pool, generate tickets, manage rounds, view tickets."""
 
+import re
 import secrets
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import RedirectResponse
-from sqlalchemy import delete, func
+from fastapi.responses import RedirectResponse, Response
+from sqlalchemy import delete, func, or_
 from sqlmodel import Session, select
 from starlette.concurrency import run_in_threadpool
 
@@ -12,6 +13,8 @@ from app.db import get_session
 from app.deps import require_user
 from app.models import Claim, Game, GameSong, Round, Song, Team, Ticket, User
 from app.security import check_csrf
+from app.services.series import latest_runs, series_key
+from app.services.pdf import PAPER_SIZES, TICKETS_PER_PAGE, build_tickets_pdf, load_fonts
 from app.services.patterns import MODE_FULL_HOUSE, MODE_LINES, RoundRules, describe_rules, validate_rules
 from app.services.ticket_gen import TicketGenerationError, generate_tickets
 from app.web import flash, render
@@ -53,7 +56,8 @@ def _library(session: Session, user: User) -> list[Song]:
 
 @router.get("")
 def games_list(request: Request, user: User = Depends(require_user), session: Session = Depends(get_session)):
-    games = session.exec(select(Game).where(Game.owner_id == user.id).order_by(Game.created_at.desc())).all()
+    every_run = session.exec(select(Game).where(Game.owner_id == user.id).order_by(Game.created_at.desc())).all()
+    games, run_counts = latest_runs(every_run)  # re-running a game doesn't add rows to the list
     ids = [game.id for game in games]
     tickets = dict(
         session.exec(
@@ -67,7 +71,7 @@ def games_list(request: Request, user: User = Depends(require_user), session: Se
             .group_by(GameSong.game_id)
         ).all()
     )
-    return render(request, "games.html", user=user, games=games, ticket_counts=tickets, song_counts=songs)
+    return render(request, "games.html", user=user, games=games, ticket_counts=tickets, song_counts=songs, run_counts=run_counts)
 
 
 def _new_game_page(request, user, session, *, status_code=200, form=None, selected=(), errors=()):
@@ -166,6 +170,12 @@ def game_detail(
     ticket_numbers = session.exec(select(Ticket.number).where(Ticket.game_id == game.id).order_by(Ticket.number)).all()
     song_count = session.exec(select(func.count(GameSong.song_id)).where(GameSong.game_id == game.id)).one()
     team_count = session.exec(select(func.count(Team.id)).where(Team.game_id == game.id)).one()
+    key = series_key(game)
+    other_runs = session.exec(
+        select(Game)
+        .where(or_(Game.id == key, Game.series_id == key), Game.owner_id == user.id, Game.id != game.id)
+        .order_by(Game.run_number.desc())
+    ).all()
     return render(
         request,
         "game.html",
@@ -175,6 +185,7 @@ def game_detail(
         ticket_numbers=ticket_numbers,
         song_count=song_count,
         team_count=team_count,
+        other_runs=other_runs,
         max_lines=2 * game.grid_size + 2,
     )
 
@@ -352,3 +363,92 @@ def ticket_view(
         size=size,
         total=total,
     )
+
+
+@router.get("/{game_id}/tickets.pdf")
+def tickets_pdf(
+    request: Request,
+    game_id: int,
+    paper: str = "letter",
+    per_page: int = 2,
+    user: User = Depends(require_user),
+    session: Session = Depends(get_session),
+):
+    """Every ticket in one PDF, numbered, ready to print and hand out."""
+    game = owned_game(session, user, game_id)
+    if paper not in PAPER_SIZES or per_page not in TICKETS_PER_PAGE:
+        raise HTTPException(status_code=400, detail="Unsupported paper size or tickets-per-page value")
+    tickets = session.exec(select(Ticket).where(Ticket.game_id == game.id).order_by(Ticket.number)).all()
+    if not tickets:
+        raise HTTPException(status_code=404, detail="This game has no tickets")
+    wanted = {song_id for ticket in tickets for song_id in ticket.cells}
+    songs = {s.id: s for s in session.exec(select(Song).where(Song.id.in_(wanted))).all()}
+    sheets = [
+        (ticket.number, [(songs[sid].title, songs[sid].artist) if sid in songs else ("(song removed)", "") for sid in ticket.cells])
+        for ticket in tickets
+    ]
+    settings = request.app.state.settings
+    try:
+        fonts = load_fonts(settings.pdf_font, settings.pdf_font_bold)
+    except Exception:  # a bad font path shouldn't stop printing: fall back to the built-in font
+        fonts = load_fonts()
+    data = build_tickets_pdf(game.name, game.grid_size, sheets, paper=paper, per_page=per_page, fonts=fonts)
+    filename = re.sub(r"[^A-Za-z0-9_-]+", "-", game.name).strip("-") or "game"
+    return Response(
+        content=data,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}-tickets.pdf"', "Cache-Control": "no-store"},
+    )
+
+
+@router.post("/{game_id}/rerun")
+def rerun_game(
+    request: Request,
+    game_id: int,
+    regenerate: bool = Form(False),
+    csrf_token: str = Form(""),
+    user: User = Depends(require_user),
+    session: Session = Depends(get_session),
+):
+    """Run a finished game again: same song pool, rounds and (by default) the same tickets,
+    so printed tickets stay valid, under a new join code. Teams and claims start fresh."""
+    check_csrf(request, csrf_token)
+    source = owned_game(session, user, game_id)
+    if source.status != "finished":
+        flash(request, "Only a finished game can be run again.", "error")
+        return _redirect(f"/games/{source.id}")
+
+    key = series_key(source)
+    latest = session.exec(
+        select(func.max(Game.run_number)).where(or_(Game.id == key, Game.series_id == key), Game.owner_id == user.id)
+    ).one() or 1
+    pool = list(session.exec(select(GameSong.song_id).where(GameSong.game_id == source.id)).all())
+    old_tickets = session.exec(select(Ticket).where(Ticket.game_id == source.id).order_by(Ticket.number)).all()
+    if regenerate:
+        try:
+            generated = generate_tickets(pool, source.grid_size, len(old_tickets))
+        except TicketGenerationError as exc:
+            flash(request, str(exc), "error")
+            return _redirect(f"/games/{source.id}")
+        tickets = list(enumerate(generated.tickets, start=1))
+    else:
+        tickets = [(t.number, list(t.cells)) for t in old_tickets]
+
+    game = Game(
+        owner_id=user.id, name=source.name, code=_new_code(session), grid_size=source.grid_size,
+        series_id=key, run_number=latest + 1,
+    )
+    session.add(game)
+    session.flush()
+    session.add_all(GameSong(game_id=game.id, song_id=song_id) for song_id in pool)
+    for r in session.exec(select(Round).where(Round.game_id == source.id).order_by(Round.number)).all():
+        session.add(Round(
+            game_id=game.id, number=r.number, name=r.name, mode=r.mode, lines_required=r.lines_required,
+            rows=r.rows, columns=r.columns, diagonals=r.diagonals,
+        ))
+    session.add_all(Ticket(game_id=game.id, number=number, cells=cells) for number, cells in tickets)
+    session.commit()
+
+    how = "with new tickets" if regenerate else "with the same tickets, so printed copies still work"
+    flash(request, f"Run {game.run_number} of \u201c{game.name}\u201d is ready {how}. New join code: {game.code}", "success")
+    return _redirect(f"/games/{game.id}")

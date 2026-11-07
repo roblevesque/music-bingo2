@@ -22,7 +22,11 @@ def make_engine(url: str):
 # missing *tables*, so these are added by hand. Add Alembic before real users depend
 # on the data; until then this keeps development databases working.
 ADDITIVE_COLUMNS = {
-    "game": [("current_round", "INTEGER NOT NULL DEFAULT 1")],
+    "game": [
+        ("current_round", "INTEGER NOT NULL DEFAULT 1"),
+        ("series_id", "INTEGER"),
+        ("run_number", "INTEGER NOT NULL DEFAULT 1"),
+    ],
 }
 
 

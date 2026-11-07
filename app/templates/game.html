@@ -23,11 +23,11 @@
 {% block content %}
 <p><a href="/games">&larr; Games</a></p>
 <div class="row spread">
-  <h1>{{ game.name }}</h1>
+  <h1>{{ game.name }}{% if game.run_number > 1 or other_runs %} <span class="muted">run {{ game.run_number }}</span>{% endif %}</h1>
   <form method="post" action="/games/{{ game.id }}/delete" class="inline"
         data-confirm="Delete this game and all of its tickets?">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <button class="link danger" type="submit">Delete game</button>
+    <button class="link danger" type="submit">{{ 'Delete this run' if other_runs else 'Delete game' }}</button>
   </form>
 </div>
 
@@ -38,6 +38,32 @@
     {{ team_count }} team{{ '' if team_count == 1 else 's' }} joined &middot; status: {{ game.status }}</p>
   <p><a class="button" href="/games/{{ game.id }}/run">{% if game.status == 'draft' %}Open host console{% else %}Back to host console{% endif %}</a></p>
 </section>
+
+{% if game.status == 'finished' %}
+<section class="card">
+  <h2>Run this game again</h2>
+  <p class="muted">Creates a new run with a new join code, the same songs and rounds, and fresh teams.
+    By default the tickets are kept, so tickets you already printed still work.</p>
+  <form method="post" action="/games/{{ game.id }}/rerun" class="stack">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label class="check"><input type="checkbox" name="regenerate" value="on">
+      Generate new tickets instead (printed tickets will no longer match)</label>
+    <button type="submit">Run again with a new join code</button>
+  </form>
+</section>
+{% endif %}
+
+{% if other_runs %}
+<section class="card">
+  <h2>Other runs of this game</h2>
+  <ul class="plain">
+    {% for run in other_runs %}
+    <li><a href="/games/{{ run.id }}">Run {{ run.run_number }}</a>
+      <span class="muted">&middot; code {{ run.code }} &middot; {{ run.status }}</span></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
 
 <section class="card">
   <h2>Rounds</h2>
@@ -70,6 +96,20 @@
 
 <section class="card">
   <h2>Tickets</h2>
+  <form method="get" action="/games/{{ game.id }}/tickets.pdf" class="row">
+    <label>Paper
+      <select name="paper"><option value="letter">US Letter</option><option value="a4">A4</option></select>
+    </label>
+    <label>Tickets per page
+      <select name="per_page">
+        <option value="2" selected>2 (recommended)</option>
+        <option value="1">1</option>
+        <option value="4">4 (small print; best for 3&times;3 or 4&times;4)</option>
+      </select>
+    </label>
+    <button type="submit">Download all {{ ticket_numbers|length }} tickets (PDF)</button>
+  </form>
+  <p class="muted">Each ticket is numbered, so you can check a printed ticket from the host console.</p>
   <p class="chips">
     {% for n in ticket_numbers %}<a class="chip" href="/games/{{ game.id }}/tickets/{{ n }}">{{ n }}</a>{% endfor %}
   </p>
