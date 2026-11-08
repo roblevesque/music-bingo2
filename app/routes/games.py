@@ -391,10 +391,7 @@ def tickets_pdf(
         for ticket in tickets
     ]
     settings = request.app.state.settings
-    try:
-        fonts = load_fonts(settings.pdf_font, settings.pdf_font_bold)
-    except Exception:  # a bad font path shouldn't stop printing: fall back to the built-in font
-        fonts = load_fonts()
+    fonts = fonts_from_settings(settings)  # falls back to the built-in font if the configured one fails
     brand = brand_style(session, settings, game.owner_id)
     data = build_tickets_pdf(game.name, game.grid_size, sheets, paper=paper, per_page=per_page, fonts=fonts, brand=brand)
     filename = re.sub(r"[^A-Za-z0-9_-]+", "-", game.name).strip("-") or "game"

@@ -60,7 +60,7 @@ Or in Docker: `docker compose up --build`.
 - [X] Progressive game play (Each time a player wins, host can set the winable patterns for use when checking the next ticket. For instance, First Round: 1 line, Second Round: Two or more lines, Third round: Full house)
 
 ### Later
-- [ ] Ticket branding via web interface
+- [X] Ticket branding via web interface
 - [ ] Remaining playlist visible from host console, not just next up
 - [ ] Related to above perhaps, but host console more completely and effectively using screen real estate
 - [ ] Game import/export
