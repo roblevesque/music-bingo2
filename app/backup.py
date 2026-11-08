@@ -5,7 +5,7 @@
 
 Copying bingo.db3 while the app is running can miss recent changes (SQLite keeps them in a
 side file for a while). `create` uses SQLite's own online-backup API, so the copy is consistent
-even mid-game. The archive holds the database, the uploaded clips and the session key.
+even mid-game. The archive holds the database, the uploaded clips, ticket logos and the session key.
 It does not import the web framework, so it also works from a bare Python install.
 """
 
@@ -22,8 +22,9 @@ from pathlib import Path
 DB_NAME = "bingo.db3"
 KEY_NAME = "secret_key"
 CLIPS_NAME = "clips"
+BRANDING_NAME = "branding"
 ARCHIVE_PREFIX = "musicbingo-backup-"
-ALLOWED_TOP_LEVEL = {DB_NAME, KEY_NAME, CLIPS_NAME}
+ALLOWED_TOP_LEVEL = {DB_NAME, KEY_NAME, CLIPS_NAME, BRANDING_NAME}
 
 
 def _stamp(now: float | None = None) -> str:
@@ -63,6 +64,8 @@ def create_backup(data_dir: Path, out_dir: Path, now: float | None = None) -> Pa
                 archive.add(data_dir / KEY_NAME, arcname=KEY_NAME)
             if (data_dir / CLIPS_NAME).is_dir():
                 archive.add(data_dir / CLIPS_NAME, arcname=CLIPS_NAME)
+            if (data_dir / BRANDING_NAME).is_dir():
+                archive.add(data_dir / BRANDING_NAME, arcname=BRANDING_NAME)
     return target
 
 
@@ -100,7 +103,7 @@ def restore_backup(archive_path: Path, data_dir: Path, force: bool = False, now:
     """
     data_dir = Path(data_dir)
     data_dir.mkdir(parents=True, exist_ok=True)
-    existing = [n for n in (DB_NAME, f"{DB_NAME}-wal", f"{DB_NAME}-shm", KEY_NAME, CLIPS_NAME) if (data_dir / n).exists()]
+    existing = [n for n in (DB_NAME, f"{DB_NAME}-wal", f"{DB_NAME}-shm", KEY_NAME, CLIPS_NAME, BRANDING_NAME) if (data_dir / n).exists()]
     if existing and not force:
         raise FileExistsError(f"{data_dir} already has data ({', '.join(existing)}). Use --force to move it aside and restore.")
 

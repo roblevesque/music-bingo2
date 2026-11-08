@@ -6,10 +6,13 @@ Pure layout code (no database or web imports): it is handed plain data and retur
 from dataclasses import dataclass
 from io import BytesIO
 
+from reportlab.lib.colors import HexColor, black, gray
 from reportlab.lib.pagesizes import A4, letter
-from reportlab.lib.utils import simpleSplit
+from reportlab.lib.utils import ImageReader, simpleSplit
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfgen import canvas
+
+from app.services.branding import on_color
 
 PAPER_SIZES = {"letter": letter, "a4": A4}
 TICKETS_PER_PAGE = {1: (1, 1), 2: (1, 2), 4: (2, 2)}  # per page -> (columns, rows)
@@ -17,8 +20,19 @@ TICKETS_PER_PAGE = {1: (1, 1), 2: (1, 2), 4: (2, 2)}  # per page -> (columns, ro
 PAGE_MARGIN = 28
 TICKET_INSET = 8  # space between a ticket and the cut line around it
 HEADER_HEIGHT = 26
+FOOTER_HEIGHT = 16
 LEADING = 1.15
 MIN_FONT = 5.0
+
+
+@dataclass(frozen=True)
+class BrandStyle:
+    """The host's ticket branding. Every part is optional."""
+
+    accent: str | None = None  # "#rrggbb": header band and square borders
+    header_text: str = ""  # shown instead of the game name
+    footer_text: str = ""
+    logo_png: bytes | None = None  # already validated by services.branding.process_logo
 
 
 @dataclass(frozen=True)
@@ -78,7 +92,9 @@ def shorten(text: str, font: str, size: float, width: float) -> str:
     return text + "\u2026"
 
 
-def _draw_cell(c, x, y, w, h, title, artist, fonts):
+def _draw_cell(c, x, y, w, h, title, artist, fonts, border):
+    c.setStrokeColor(border)
+    c.setFillColor(black)
     c.setLineWidth(0.6)
     c.rect(x, y, w, h)
     pad = 3
@@ -99,26 +115,50 @@ def _draw_cell(c, x, y, w, h, title, artist, fonts):
         cursor -= gap
 
 
-def _draw_ticket(c, x, y, w, h, *, game_name, number, size, cells, fonts):
+def _draw_ticket(c, x, y, w, h, *, game_name, number, size, cells, fonts, brand, logo):
     """Draw one ticket in the box whose lower-left corner is (x, y)."""
-    c.setFont(fonts.bold, 14)
+    accent = HexColor(brand.accent) if brand.accent else None
+    ink = HexColor(on_color(brand.accent)) if accent else black
+    top = y + h
+    if accent:
+        c.setFillColor(accent)
+        c.rect(x, top - HEADER_HEIGHT, w, HEADER_HEIGHT, stroke=0, fill=1)
+    c.setFillColor(ink)
+
+    left = x + 4
+    if logo is not None:
+        logo_w, logo_h = logo.getSize()
+        height = HEADER_HEIGHT - 6
+        width = min(height * logo_w / logo_h, w * 0.35)
+        height = width * logo_h / logo_w
+        c.drawImage(logo, left, top - HEADER_HEIGHT + (HEADER_HEIGHT - height) / 2, width=width, height=height, mask="auto")
+        left += width + 6
+
     number_text = f"Ticket {number}"
     number_width = pdfmetrics.stringWidth(number_text, fonts.bold, 14)
-    title_room = w - number_width - 16
     c.setFont(fonts.bold, 12)
-    c.drawString(x + 4, y + h - HEADER_HEIGHT + 8, shorten(game_name, fonts.bold, 12, title_room))
+    title = printable(brand.header_text, fonts) or game_name
+    c.drawString(left, top - HEADER_HEIGHT + 8, shorten(title, fonts.bold, 12, x + w - number_width - 12 - left))
     c.setFont(fonts.bold, 14)
-    c.drawRightString(x + w - 4, y + h - HEADER_HEIGHT + 8, number_text)
+    c.drawRightString(x + w - 4, top - HEADER_HEIGHT + 8, number_text)
 
-    grid_top = y + h - HEADER_HEIGHT
+    footer = printable(brand.footer_text, fonts)
+    grid_bottom = y + (FOOTER_HEIGHT if footer else 0)
+    if footer:
+        c.setFillColor(gray)
+        c.setFont(fonts.regular, 8)
+        c.drawCentredString(x + w / 2, y + 4, shorten(footer, fonts.regular, 8, w - 8))
+
+    grid_top = top - HEADER_HEIGHT
     cell_w = w / size
-    cell_h = (grid_top - y) / size
+    cell_h = (grid_top - grid_bottom) / size
+    border = accent if accent else black
     for row in range(size):
         for col in range(size):
-            title, artist = cells[row * size + col]
+            title_text, artist = cells[row * size + col]
             _draw_cell(
                 c, x + col * cell_w, grid_top - (row + 1) * cell_h, cell_w, cell_h,
-                printable(title, fonts), printable(artist, fonts), fonts,
+                printable(title_text, fonts), printable(artist, fonts), fonts, border,
             )
 
 
@@ -144,6 +184,7 @@ def build_tickets_pdf(
     paper: str = "letter",
     per_page: int = 2,
     fonts: Fonts | None = None,
+    brand: BrandStyle | None = None,
 ) -> bytes:
     """tickets: [(ticket number, [(title, artist) per square, row-major]), ...]"""
     if not tickets:
@@ -153,6 +194,11 @@ def build_tickets_pdf(
     if per_page not in TICKETS_PER_PAGE:
         raise ValueError(f"tickets per page must be one of {sorted(TICKETS_PER_PAGE)}")
     fonts = fonts or Fonts()
+    brand = brand or BrandStyle()
+    try:
+        logo = ImageReader(BytesIO(brand.logo_png)) if brand.logo_png else None
+    except Exception:  # an unreadable logo must never stop tickets from printing
+        logo = None
     page_w, page_h = PAPER_SIZES[paper]
     cols, rows = TICKETS_PER_PAGE[per_page]
     slot_w = (page_w - 2 * PAGE_MARGIN) / cols
@@ -173,6 +219,15 @@ def build_tickets_pdf(
         _draw_ticket(
             c, x, y, slot_w - 2 * TICKET_INSET, slot_h - 2 * TICKET_INSET,
             game_name=printable(game_name, fonts), number=number, size=size, cells=cells, fonts=fonts,
+            brand=brand, logo=logo,
         )
     c.save()
     return buffer.getvalue()
+
+
+def fonts_from_settings(settings) -> Fonts:
+    """The configured TrueType font, or the built-in one if none is set or it can't be loaded."""
+    try:
+        return load_fonts(settings.pdf_font, settings.pdf_font_bold)
+    except Exception:
+        return load_fonts()

@@ -14,7 +14,8 @@ from app.deps import require_user
 from app.models import Claim, Game, GameSong, Round, Song, Team, Ticket, User
 from app.security import check_csrf
 from app.services.series import latest_runs, series_key
-from app.services.pdf import PAPER_SIZES, TICKETS_PER_PAGE, build_tickets_pdf, load_fonts
+from app.services.brand_store import brand_context, brand_style
+from app.services.pdf import PAPER_SIZES, TICKETS_PER_PAGE, build_tickets_pdf, fonts_from_settings
 from app.services.patterns import MODE_FULL_HOUSE, MODE_LINES, RoundRules, describe_rules, validate_rules
 from app.services.ticket_gen import TicketGenerationError, generate_tickets, variety_warning
 from app.web import flash, render
@@ -363,6 +364,7 @@ def ticket_view(
         grid=grid,
         size=size,
         total=total,
+        brand=brand_context(session, request.app.state.settings, game.owner_id, game.code),
     )
 
 
@@ -393,7 +395,8 @@ def tickets_pdf(
         fonts = load_fonts(settings.pdf_font, settings.pdf_font_bold)
     except Exception:  # a bad font path shouldn't stop printing: fall back to the built-in font
         fonts = load_fonts()
-    data = build_tickets_pdf(game.name, game.grid_size, sheets, paper=paper, per_page=per_page, fonts=fonts)
+    brand = brand_style(session, settings, game.owner_id)
+    data = build_tickets_pdf(game.name, game.grid_size, sheets, paper=paper, per_page=per_page, fonts=fonts, brand=brand)
     filename = re.sub(r"[^A-Za-z0-9_-]+", "-", game.name).strip("-") or "game"
     return Response(
         content=data,

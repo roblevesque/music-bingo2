@@ -17,6 +17,7 @@ from sqlmodel import Session, select
 from app.db import get_session
 from app.models import Claim, Game, Round, Song, Team, Ticket
 from app.security import check_csrf
+from app.services.brand_store import brand_context
 from app.services.checker import WIN, verify_claim
 from app.services.events import PLAYERS, Event, stream
 from app.services.patterns import describe_line
@@ -168,7 +169,8 @@ def play_page(request: Request, code: str, session: Session = Depends(get_sessio
             "marked": position in marks,
         })
     return render(request, "play.html", game=game, team=team, ticket=ticket, cells=cells,
-                  size=game.grid_size, state=public_state(session, game))
+                  size=game.grid_size, state=public_state(session, game),
+                  brand=brand_context(session, request.app.state.settings, game.owner_id, game.code))
 
 
 @router.post("/play/{code}/mark")

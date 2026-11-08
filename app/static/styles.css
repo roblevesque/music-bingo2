@@ -127,3 +127,18 @@ li.rejected { color: var(--muted); }
     font-size: 0.5rem; }
 }
 .row + .row { margin-top: 0.75rem; }
+
+/* ---- phase 6: ticket branding ---- */
+.brand-logo { display: block; max-height: 3.5rem; max-width: 60%; margin: 0 0 0.5rem; object-fit: contain; }
+.ticket.branded div.square { border-color: var(--accent); }
+.branding-layout { display: grid; gap: 1rem; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; }
+@media (max-width: 800px) { .branding-layout { grid-template-columns: 1fr; } }
+.brand-preview { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: #fff; color: #000; --brand: currentColor; }
+.brand-preview-header { display: flex; gap: 0.5rem; align-items: center; padding: 0.35rem 0.5rem; }
+.brand-preview-header strong { flex: 1; }
+.brand-preview-header img { max-height: 1.6rem; max-width: 35%; }
+.brand-preview-grid { display: grid; grid-template-columns: repeat(3, 1fr); }
+.brand-preview-grid div { border: 1px solid var(--brand); padding: 0.4rem 0.2rem; text-align: center; font-size: 0.75rem; margin: -0.5px; }
+.brand-preview-footer { text-align: center; font-size: 0.7rem; color: #666; padding: 0.25rem; }
+input[type=color] { width: 4.5rem; height: 2.6rem; padding: 0.15rem; cursor: pointer; }
+.row label.color-field { flex: 0 0 auto; min-width: 0; }

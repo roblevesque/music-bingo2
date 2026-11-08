@@ -25,38 +25,39 @@ In Music Bingo, the numbers of normal bingo are replaced by songs. Players liste
 
 | Layer | Choice | Rationale |
 |---|---|---|
-| Backend | FastAPI (or Flask) + Uvicorn | Same language as the original, so ticket logic is easy to port. Native SSE/WebSocket support. |
+| Backend | FastAPI + Uvicorn | Same language as the original, so ticket logic is easy to port. Native SSE/WebSocket support. |
 | Pages | Server-rendered Jinja2 templates | No SPA, no bundler. |
-| Interactivity | [htmx](https://htmx.org) (vendored single file) + vanilla ES modules | Browsers run ES modules directly, so nothing needs compiling. |
+| Interactivity | Vanilla ES modules + `fetch` (htmx wasn't needed) | Browsers run ES modules directly, so nothing needs compiling. |
 | Live updates | Server-Sent Events (SSE) | One-way server-to-player push is all bingo needs. Simpler than WebSockets. |
 | Database | SQLite via SQLAlchemy / SQLModel | Single file, no DB server. |
-| Printable tickets | HTML + `@media print` CSS | No PDF library required at first. |
+| Printable tickets | reportlab (pure Python) | One numbered PDF of every ticket, Letter or A4, 1, 2 or 4 per page. |
 | Tests | pytest | Unit tests for generator and checker. |
 
 **Run it:**
 
 ```bash
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+uv sync
+uv run uvicorn app.main:create_app --factory --reload
 ```
- *Note:* This is an example only. Prefer the use of uv over pip. unicorn would be fine if that's the best choice. 
+
+Or in Docker: `docker compose up --build`.
 
 ---
 
 ## 3. Features
 
 ### MVP
-- [ ] Host login (hashed passwords, session cookies)
-- [ ] Song library: upload clips (mp3/ogg), title, artist, theme tags, title ID3 tag modification
-- [ ] Selection of start point, and end point for each track
-- [ ] Game creation: pick songs, set number of tickets, generate tickets
-- [ ] Players join with game code and display name (no account)
-- [ ] Host console: play next clip, view played list, pause, skip
-- [ ] Player ticket view: tap to mark songs; claim line, two lines or full house
-- [ ] Server-side claim verification against the played list
-- [ ] PDF ticket export
-- [ ] In-browser clip trimming (Web Audio API), so ffmpeg is not needed
-- [ ] Progressive game play (Each time a player wins, host can set the winable patterns for use when checking the next ticket. For instance, First Round: 1 line, Second Round: Two or more lines, Third round: Full house)
+- [X] Host login (hashed passwords, session cookies)
+- [X] Song library: upload clips (mp3/ogg), title, artist, theme tags, title ID3 tag modification
+- [X] Selection of start point, and end point for each track
+- [X] Game creation: pick songs, set number of tickets, generate tickets
+- [X] Players join with game code and display name (no account)
+- [X] Host console: play next clip, view played list, pause, skip
+- [X] Player ticket view: tap to mark songs; claim line, two lines or full house
+- [X] Server-side claim verification against the played list
+- [X] PDF ticket export
+- [X] In-browser clip trimming, so ffmpeg is not needed (delivered as non-destructive start/end markers with a preview; files are never re-encoded)
+- [X] Progressive game play (Each time a player wins, host can set the winable patterns for use when checking the next ticket. For instance, First Round: 1 line, Second Round: Two or more lines, Third round: Full house)
 
 ### Later
 - [ ] Ticket branding via web interface
@@ -75,9 +76,10 @@ uvicorn app.main:app --reload
 - **Ticket:** a NxN grid (typically, 5x5 but host configurable) of a number songs drawn from the game's song pool (typically 30 to 75 songs, but leave amount up to host).
 - **Ticket generator:** produces N unique tickets, balances how often each song appears, and rejects duplicates or near-duplicates.
     -   Near-Duplicate tickets are defined as tickets that share approximately 80% of the same song IDs, or the same set of songs in a different permutation.
+    -   Implemented as: no two tickets hold the same set of songs, and where the pool allows, any two differ in at least a fifth of their squares. Small pools relax this step by step, and the host is warned whenever tickets end up closer than that.
 - **Play order:** shuffled once when the game starts and stored in the DB, so games are resumable and claims are verifiable. Allow reshuffle on the fly if host decides necessary
 - **Claim checker:** a claim is valid if every song in the claimed row(s) is in the played prefix. Returns one of: `win`, `rejected` (with missing songs), `already_claimed`.
-- **Win types:** one line, two lines, full house.
+- **Win types:** chosen by the host per round and changeable at any time: rows, columns and/or diagonals, a configurable number of lines, or full house.
 
 Build and unit-test the generator and checker first. They are the correctness core of the app.
 
@@ -88,41 +90,34 @@ Build and unit-test the generator and checker first. They are the correctness co
 | Entity | Key fields |
 |---|---|
 | `User` (host) | username, password_hash |
-| `Song` | file path, title, artist, tags, duration |
-| `Game` | code, status, song pool, play order, current index |
-| `Ticket` | game, ticket number, Variable song references (N rows x N) |
-| `Player` | game, display name, assigned ticket |
-| `Claim` | player, claim type, result, timestamp |
+| `Song` | owner, stored file, title, artist, tags, duration, start_ms, end_ms |
+| `Game` | owner, name, code, status, grid_size, play_order, current_index, current_round, series_id, run_number |
+| `GameSong` | game, song (the song pool) |
+| `Ticket` | game, ticket number, cells (song ids, row-major, N x N) |
+| `Round` | game, number, name, mode (lines / full house), lines_required, rows, columns, diagonals |
+| `Team` | game, name, ticket, marks (replaces `Player`; no accounts, remembered by a signed cookie) |
+| `Claim` | game, team, round, status (win / rejected), songs played at the time, detail, timestamp |
 
 ---
 
 ## 6. Project Layout
 
 ```
-musicbingo/
+music-bingo2/
 ├── app/
-│   ├── main.py            # FastAPI app, router registration
-│   ├── models.py          # DB models
-│   ├── routes/
-│   │   ├── auth.py
-│   │   ├── library.py
-│   │   ├── games.py
-│   │   ├── play.py
-│   │   └── events.py      # SSE endpoint
-│   ├── services/
-│   │   ├── ticket_gen.py
-│   │   ├── checker.py
-│   │   └── clips.py
-│   ├── templates/         # Jinja: host console, player ticket, admin
-│   └── static/
-│       ├── htmx.min.js    # vendored, no npm
-│       ├── app.js         # ES modules
-│       └── styles.css
-├── data/                  # bingo.db3, clips/ (gitignored)
+│   ├── main.py            # app factory, error pages
+│   ├── config.py, db.py, models.py, security.py, deps.py, web.py
+│   ├── backup.py          # python -m app.backup create|restore
+│   ├── routes/            # auth, library, games, run (host console), play (players)
+│   ├── services/          # patterns, checker, ticket_gen, playlist, series, events (SSE hub),
+│   │                      # snapshots, pdf, clips, parsing
+│   ├── templates/         # Jinja pages
+│   └── static/            # styles.css, app.js, play.js, console.js, live.js, playback.js
+├── data/                  # bingo.db3, clips/, secret_key (gitignored)
 ├── tests/
-├── requirements.txt
-├── Dockerfile
-├── PLAN.md
+├── pyproject.toml, uv.lock
+├── Dockerfile, compose.yaml, .dockerignore
+├── PLAN.md, DECISIONS.md
 └── README.md
 ```
 
@@ -132,8 +127,8 @@ musicbingo/
 
 ### Events
 - Server keeps an in-memory pub/sub channel per game (fine for a single worker).
-- Host's "next song" is a normal POST. The server then broadcasts over SSE: `song_played`, `claim_result`, `game_over`.
-- Clients that reconnect re-sync state from the DB.
+- Host actions (next song, claims, round changes) are normal POSTs. The server then broadcasts a full `state` snapshot over SSE, separately for players (no song titles) and for the host, plus a `ping` every 15 seconds.
+- Clients that reconnect get the current snapshot straight away, and back off and retry if the server is unreachable.
 
 ### Audio modes
 
@@ -176,9 +171,9 @@ musicbingo/
 - [X] Game restart / reuse (with new join code)
 
 ### Phase 5: Deploy
-- [ ] Dockerfile
+- [X] Dockerfile
 - [X] README with setup instructions
-- [ ] Backup guidance for `data/`
+- [X] Backup guidance for `data/`
 
 ### Phase 6: Extras
 - [ ] Items from the "Later" list in section 3
@@ -202,6 +197,6 @@ Phases 1 to 3 produce a playable game. Each phase ends with something runnable o
 ## 10. Open Decisions (Answers in DECISIONS.md)
 
 - [X] Primary audio mode: in-room, remote, or both?
-- [X] FastAPI vs Flask?
+- [X] FastAPI vs Flask? (FastAPI)
 - [X] Do players need persistent accounts, or are game-code joins enough?
 - [X] Which win types ship in the MVP?

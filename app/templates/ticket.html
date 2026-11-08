@@ -2,9 +2,10 @@
 {% block title %}Ticket {{ number }} &middot; {{ game.name }}{% endblock %}
 {% block content %}
 <p><a href="/games/{{ game.id }}">&larr; {{ game.name }}</a></p>
+{% if brand and brand.logo_url %}<img class="brand-logo" src="{{ brand.logo_url }}" alt="">{% endif %}
 <h1>Ticket {{ number }} <span class="muted">of {{ total }}</span></h1>
 
-<div class="ticket" data-size="{{ size }}" style="grid-template-columns: repeat({{ size }}, 1fr);">
+<div class="ticket{% if brand and brand.accent %} branded{% endif %}" data-size="{{ size }}" style="grid-template-columns: repeat({{ size }}, 1fr);{% if brand and brand.accent %} --accent: {{ brand.accent }};{% endif %}">
   {% for row in grid %}{% for song in row %}
   <div class="square">
     {% if song %}<strong>{{ song.title }}</strong><span>{{ song.artist }}</span>{% else %}<em>(song removed)</em>{% endif %}

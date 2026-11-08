@@ -16,7 +16,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app.config import Settings, load_settings
 from app.db import init_db, make_engine
 from app.deps import LoginRequired
-from app.routes import auth, games, library, play, run
+from app.routes import auth, branding, games, library, play, run
 from app.services.events import Hub
 from app.web import BASE_DIR, error_page
 
@@ -109,6 +109,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(auth.router)
     app.include_router(library.router)
     app.include_router(games.router)
+    app.include_router(branding.router)
     app.include_router(run.router)
     app.include_router(play.router)
     return app

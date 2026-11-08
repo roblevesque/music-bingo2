@@ -23,8 +23,13 @@ class Settings:
     def clips_dir(self) -> Path:
         return self.data_dir / "clips"
 
+    @property
+    def branding_dir(self) -> Path:
+        return self.data_dir / "branding"
+
     def ensure_dirs(self) -> None:
         self.clips_dir.mkdir(parents=True, exist_ok=True)
+        self.branding_dir.mkdir(parents=True, exist_ok=True)
 
     def secret_key(self) -> str:
         """Session-signing key: env var if set, else generated once and kept in data/."""

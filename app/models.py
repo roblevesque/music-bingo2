@@ -42,6 +42,18 @@ class Song(SQLModel, table=True):
         return [tag for tag in self.tags.split(",") if tag]
 
 
+class Branding(SQLModel, table=True):
+    """A host's ticket branding, applied to the printed PDF and to the on-screen tickets."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    owner_id: int = Field(foreign_key="user.id", unique=True, index=True)
+    header_text: str = Field(default="", max_length=80)  # shown instead of the game name
+    footer_text: str = Field(default="", max_length=120)
+    accent_color: str = ""  # "#rrggbb", or "" for none
+    logo_filename: str = ""  # a PNG inside data/branding/, or "" for none
+    updated_at: datetime = Field(default_factory=utcnow)
+
+
 class Game(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     owner_id: int = Field(foreign_key="user.id", index=True)

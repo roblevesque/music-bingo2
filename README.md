@@ -22,6 +22,8 @@ Inspired by [asrashley/music-bingo](https://github.com/asrashley/music-bingo). S
   to the next round, end the game. Optional automatic next song and fade in/out.
 - **Printed tickets:** download every ticket as one numbered PDF, hand them out, and check a paper
   ticket by number from the console.
+- **Ticket branding:** add your logo, an accent colour, and header and footer text from the web
+  interface. They appear on the printed PDF and on the tickets players see.
 - **Run again:** re-run a finished game under a new join code, keeping the same tickets so printed
   copies stay valid (or regenerating them).
 - **Phone friendly:** layouts tested at 375 px wide, with live updates that reconnect after a dropped
@@ -78,19 +80,21 @@ See [Backups](#backups) for how to back up safely.
    more varied tickets, and the app tells you when tickets end up closer than the 80% rule.
 3. **Rounds:** the game starts with one round (one line, rows only). Add more on the game page, or
    from the console during play.
-4. **Printed tickets (optional):** on the game page choose paper size and tickets per page, then
+4. **Branding (optional):** open **Branding** in the menu to add a logo, an accent colour and your own
+   header and footer wording. Use *Preview as a PDF* to see how it prints. It applies to all your games.
+5. **Printed tickets (optional):** on the game page choose paper size and tickets per page, then
    download the PDF. Each ticket is numbered.
-5. **Console:** open the host console and share the join code or the `/join/CODE` link. Players
+6. **Console:** open the host console and share the join code or the `/join/CODE` link. Players
    enter a team name and get a ticket.
-6. **Play:** press **Start game**, then **Next song** for each clip. The clip plays in the host's
+7. **Play:** press **Start game**, then **Next song** for each clip. The clip plays in the host's
    browser; players never see song titles, only their own ticket.
-7. **Claims:** when a team taps **Bingo!** the server checks it. The console lists every claim with
+8. **Claims:** when a team taps **Bingo!** the server checks it. The console lists every claim with
    the song count at the time, so ties are visible. A rejected claim has a short cooldown.
-8. **Rounds:** after a win, press **Next round**, or change what counts as a win ("Change what
+9. **Rounds:** after a win, press **Next round**, or change what counts as a win ("Change what
    counts as a win"). The same team can win several rounds.
-9. **Paper tickets:** type the ticket number into **Check a printed ticket** to see whether it wins the
+10. **Paper tickets:** type the ticket number into **Check a printed ticket** to see whether it wins the
    current round, and what it is still missing.
-10. **Afterwards:** **End game**, then **Run this game again** from the game page.
+11. **Afterwards:** **End game**, then **Run this game again** from the game page.
 
 ### Automatic next song and fades
 
@@ -130,7 +134,7 @@ uv run python -m app.backup create --out backups --keep 14   # timestamped .tar.
 uv run python -m app.backup restore backups/musicbingo-backup-<time>.tar.gz --data-dir data
 ```
 
-A backup holds the database, the uploaded clips and the session key (so everyone stays logged in
+A backup holds the database, the uploaded clips, ticket logos and the session key (so everyone stays logged in
 after a restore). Treat it as sensitive and copy it off the machine. Restoring into a folder that
 already has data needs `--force`, which moves the old data into a `before-restore-<time>` folder
 instead of deleting it. In Docker:
@@ -179,6 +183,7 @@ app/
     auth.py          first-run setup, login, logout, home page
     library.py       song library
     games.py         games, rounds, tickets, PDF download, run again
+    branding.py      ticket branding page, logo files, PDF preview
     run.py           host console and its actions
     play.py          joining, marking, claiming (player side)
   services/          pure Python where possible (no web framework)
@@ -190,6 +195,8 @@ app/
     events.py        live-update hub (Server-Sent Events)
     snapshots.py     state sent to players and to the host
     pdf.py           printable tickets (reportlab)
+    branding.py      colours and logo processing (Pillow)
+    brand_store.py   loads a host's branding for PDFs and pages
     clips.py         audio files and tags (mutagen)
     parsing.py       tags and time values
   templates/         Jinja pages
@@ -236,6 +243,8 @@ so an existing `data/bingo.db3` keeps working. Add Alembic before real users dep
   unless you set `MUSICBINGO_PDF_FONT`.
 - A song that is in a game's pool can't be deleted from the library until that game is deleted.
   Rounds that have been played, or are in play, can't be deleted.
+- Branding belongs to the host account and applies to all of that host's games. Logos are shrunk to
+  at most 600 pixels, and the PDF header and footer text use the same built-in font as the tickets.
 - Grids larger than about 6×6 are cramped on a phone.
 
 ## Possible next steps

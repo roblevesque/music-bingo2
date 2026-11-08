@@ -13,6 +13,8 @@ def make_data_dir(root, rows=3):
     (data / "clips").mkdir(parents=True)
     (data / "clips" / "a.mp3").write_bytes(b"audio-bytes")
     (data / "secret_key").write_text("s3cret")
+    (data / "branding").mkdir()
+    (data / "branding" / "logo-1.png").write_bytes(b"logo-bytes")
     connection = sqlite3.connect(data / "bingo.db3")
     connection.execute("PRAGMA journal_mode=WAL")
     connection.execute("CREATE TABLE song (id INTEGER PRIMARY KEY, title TEXT)")
@@ -41,6 +43,7 @@ def test_backup_includes_changes_still_in_the_wal_and_restores_everything(tmp_pa
     assert count_songs(restored / "bingo.db3") == 4
     assert (restored / "clips" / "a.mp3").read_bytes() == b"audio-bytes"
     assert (restored / "secret_key").read_text() == "s3cret"
+    assert (restored / "branding" / "logo-1.png").read_bytes() == b"logo-bytes"
     live.close()
 
 

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Ticket branding &middot; Music Bingo{% endblock %}
+{% block content %}
+<h1>Ticket branding</h1>
+<p class="muted">Add your logo, colour and wording to printed tickets. The colour and logo also appear on
+  the tickets players see on their phones. Everything is optional, and it applies to all of your games.</p>
+
+{% for error in errors %}<p class="flash error">{{ error }}</p>{% endfor %}
+
+<div class="branding-layout">
+  <form method="post" action="/branding" enctype="multipart/form-data" class="card" id="branding-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+    <label>Header text <span class="muted">(shown instead of the game name)</span>
+      <input name="header_text" id="header_text" value="{{ form.header_text }}" maxlength="80" placeholder="e.g. Thursday Music Bingo">
+    </label>
+    <label>Footer text <span class="muted">(printed along the bottom of each ticket)</span>
+      <input name="footer_text" id="footer_text" value="{{ form.footer_text }}" maxlength="120" placeholder="e.g. The Rusty Anchor &middot; every Thursday at 8pm">
+    </label>
+
+    <div class="row">
+      <label class="check"><input type="checkbox" name="use_accent" id="use_accent" {% if form.use_accent %}checked{% endif %}> Use an accent colour</label>
+      <label class="color-field">Colour <input type="color" name="accent_color" id="accent_color" value="{{ form.accent_color }}"></label>
+    </div>
+
+    <label>Logo <span class="muted">(PNG or JPEG, up to 1 MB; transparent PNGs work best)</span>
+      <input type="file" name="logo" id="logo" accept="image/png,image/jpeg">
+    </label>
+    {% if logo_url %}
+    <p class="row"><img src="{{ logo_url }}" alt="Your current logo" class="brand-logo">
+      <label class="check"><input type="checkbox" name="remove_logo"> Remove the current logo</label></p>
+    {% endif %}
+
+    <button type="submit">Save branding</button>
+    <a href="/branding/preview.pdf" target="_blank" rel="noopener">Preview as a PDF (uses the saved settings)</a>
+  </form>
+
+  <section class="card" aria-label="Preview">
+    <h2>Preview</h2>
+    <div class="brand-preview" id="preview" data-logo="{{ logo_url or '' }}">
+      <div class="brand-preview-header" id="pv-header">
+        <img id="pv-logo" alt="" hidden>
+        <strong id="pv-title">Your game name</strong>
+        <span>Ticket 1</span>
+      </div>
+      <div class="brand-preview-grid">
+        {% for i in range(9) %}<div><strong>Song {{ i + 1 }}</strong><br><small>Artist</small></div>{% endfor %}
+      </div>
+      <div class="brand-preview-footer" id="pv-footer"></div>
+    </div>
+    <p class="muted">An approximation. Use the PDF preview to see exactly how it prints.</p>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}<script type="module" src="{{ url_for('static', path='branding.js') }}"></script>{% endblock %}
