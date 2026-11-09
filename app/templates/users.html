@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Users &middot; Music Bingo{% endblock %}
+{% block content %}
+<h1>Users</h1>
+
+{% if credentials %}
+<section class="card credentials" role="alert">
+  <h2>{{ 'Account created' if credentials.action == 'created' else 'Password reset' }}</h2>
+  <p>Give these to <strong>{{ credentials.username }}</strong>. <strong>The password is shown only now</strong>
+    and can't be looked up later. They will be asked to choose their own at first login.</p>
+  <p>Username <code>{{ credentials.username }}</code></p>
+  <p>Temporary password <code class="secret">{{ credentials.password }}</code></p>
+</section>
+{% endif %}
+{% for error in errors %}<p class="flash error">{{ error }}</p>{% endfor %}
+
+<section class="card">
+  <h2>Add a user</h2>
+  <form method="post" action="/users" class="row">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>Username <input name="username" autocomplete="off" required minlength="3" maxlength="32"></label>
+    <label class="check"><input type="checkbox" name="can_create_games" checked> Can create games</label>
+    <label class="check"><input type="checkbox" name="is_admin"> Administrator</label>
+    <button type="submit">Create account</button>
+  </form>
+  <p class="muted">A random password is generated for you to pass on. Administrators can add and manage users;
+    people who can't create games can still use the library, branding and any games they already have.</p>
+</section>
+
+<section class="card">
+  <h2>Accounts</h2>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>User</th><th>Permissions</th><th>Account</th></tr></thead>
+    <tbody>
+    {% for u in users %}
+      <tr>
+        <td>
+          <strong>{{ u.username }}</strong>{% if u.id == user.id %} <span class="muted">(you)</span>{% endif %}<br>
+          {% if u.is_admin %}<span class="tag">admin</span>{% endif %}
+          {% if not u.can_create_games %}<span class="tag">no new games</span>{% endif %}
+          {% if not u.is_active %}<span class="tag">disabled</span>{% endif %}
+          {% if u.must_change_password %}<span class="tag">password not yet changed</span>{% endif %}
+        </td>
+        <td>
+          <form method="post" action="/users/{{ u.id }}/permissions" class="stack">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <label class="check"><input type="checkbox" name="can_create_games" {% if u.can_create_games %}checked{% endif %}> Can create games</label>
+            <label class="check"><input type="checkbox" name="is_admin" {% if u.is_admin %}checked{% endif %}> Administrator</label>
+            <button type="submit" class="secondary">Save</button>
+          </form>
+        </td>
+        <td>
+          {% if u.id != user.id %}
+          <form method="post" action="/users/{{ u.id }}/reset-password" class="inline"
+                data-confirm="Reset the password for {{ u.username }}? They will be signed out everywhere.">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="link" type="submit">Reset password</button>
+          </form><br>
+          <form method="post" action="/users/{{ u.id }}/active" class="inline"
+                {% if u.is_active %}data-confirm="Disable {{ u.username }}? They will be signed out and unable to log in."{% endif %}>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="active" value="{{ '0' if u.is_active else '1' }}">
+            <button class="link {{ 'danger' if u.is_active else '' }}" type="submit">{{ 'Disable' if u.is_active else 'Enable' }}</button>
+          </form>
+          {% else %}<span class="muted">Use <a href="/account">Account</a> to change your password.</span>{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endblock %}

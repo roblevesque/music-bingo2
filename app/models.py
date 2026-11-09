@@ -21,6 +21,11 @@ class User(SQLModel, table=True):
     username: str = Field(index=True, unique=True, max_length=32)
     password_hash: str
     created_at: datetime = Field(default_factory=utcnow)
+    is_admin: bool = False  # can add and manage users
+    can_create_games: bool = True  # can create games (including by import or run again)
+    is_active: bool = True  # a disabled account can't log in
+    must_change_password: bool = False  # set for generated passwords: chosen again at first login
+    token_version: int = 0  # bumped to end every open session of this account
 
 
 class Song(SQLModel, table=True):
@@ -32,6 +37,7 @@ class Song(SQLModel, table=True):
     artist: str = Field(default="", max_length=200)
     tags: str = ""  # normalised, comma-separated
     duration_ms: int | None = None
+    sha256: str = ""  # of the audio file; lets exported games find songs that are already in a library
     # Non-destructive play window: the file is never re-encoded.
     start_ms: int = 0
     end_ms: int | None = None  # None = play to the end

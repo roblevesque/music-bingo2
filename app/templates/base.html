@@ -11,10 +11,10 @@
   <header class="topbar">
     <a class="brand" href="/">&#9835; Music Bingo</a>
     {% if user %}
-    <nav><a href="/library">Library</a> <a href="/games">Games</a> <a href="/branding">Branding</a></nav>
+    <nav><a href="/library">Library</a> <a href="/games">Games</a> <a href="/branding">Branding</a>{% if user.is_admin %} <a href="/users">Users</a>{% endif %}</nav>
     <form method="post" action="/logout" class="inline">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <span class="who">{{ user.username }}</span>
+      <a class="who" href="/account" title="Your account">{{ user.username }}</a>
       <button class="link" type="submit">Log out</button>
     </form>
     {% endif %}

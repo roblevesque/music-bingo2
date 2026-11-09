@@ -63,8 +63,8 @@ Or in Docker: `docker compose up --build`.
 - [X] Ticket branding via web interface
 - [ ] Remaining playlist visible from host console, not just next up
 - [ ] Related to above perhaps, but host console more completely and effectively using screen real estate
-- [ ] Game import/export
-- [ ] Permissions model to allow some users to add more users, or deny others the abillity to create games
+- [X] Game import/export
+- [X] Permissions model to allow some users to add more users, or deny others the abillity to create games
 - [ ] Host triggerable sfx events. For example, 'thinking' music while checking tickets, win and lose sfx. 
 - [ ] Pre and post game music playing. Possibly from commercial service, or from pool of music already available. 
 - [ ] Host remote. Allow host to pause music, trigger events from mobile device
@@ -89,8 +89,8 @@ Build and unit-test the generator and checker first. They are the correctness co
 
 | Entity | Key fields |
 |---|---|
-| `User` (host) | username, password_hash |
-| `Song` | owner, stored file, title, artist, tags, duration, start_ms, end_ms |
+| `User` (host) | username, password_hash, is_admin, can_create_games, is_active, must_change_password, token_version |
+| `Song` | owner, stored file, title, artist, tags, duration, start_ms, end_ms, sha256 |
 | `Game` | owner, name, code, status, grid_size, play_order, current_index, current_round, series_id, run_number |
 | `GameSong` | game, song (the song pool) |
 | `Ticket` | game, ticket number, cells (song ids, row-major, N x N) |

@@ -10,7 +10,7 @@ from sqlmodel import Session, select
 from starlette.concurrency import run_in_threadpool
 
 from app.db import get_session
-from app.deps import require_user
+from app.deps import require_game_creator, require_user
 from app.models import Claim, Game, GameSong, Round, Song, Team, Ticket, User
 from app.security import check_csrf
 from app.services.series import latest_runs, series_key
@@ -93,7 +93,7 @@ def _new_game_page(request, user, session, *, status_code=200, form=None, select
 
 
 @router.get("/new")
-def new_game_form(request: Request, user: User = Depends(require_user), session: Session = Depends(get_session)):
+def new_game_form(request: Request, user: User = Depends(require_game_creator), session: Session = Depends(get_session)):
     return _new_game_page(request, user, session)
 
 
@@ -105,7 +105,7 @@ async def new_game_submit(
     ticket_count: str = Form(str(DEFAULT_TICKETS)),
     song_ids: list[int] = Form(default=[]),
     csrf_token: str = Form(""),
-    user: User = Depends(require_user),
+    user: User = Depends(require_game_creator),
     session: Session = Depends(get_session),
 ):
     check_csrf(request, csrf_token)
@@ -408,7 +408,7 @@ def rerun_game(
     game_id: int,
     regenerate: bool = Form(False),
     csrf_token: str = Form(""),
-    user: User = Depends(require_user),
+    user: User = Depends(require_game_creator),
     session: Session = Depends(get_session),
 ):
     """Run a finished game again: same song pool, rounds and (by default) the same tickets,

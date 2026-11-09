@@ -117,6 +117,12 @@ def host_state(session: Session, game: Game, join_url: str) -> dict:
             for n, view in reversed([(i + 1, song_view(sid)) for i, sid in enumerate(played)])
             if view
         ],
+        # Every song still to come, in play order, numbered as it will be heard. Host only.
+        "upcoming": [
+            {"n": i + 1, **view}
+            for i, view in ((i, song_view(sid)) for i, sid in enumerate(order) if i >= game.current_index)
+            if view
+        ],
         "teams": [{"id": team.id, "name": team.name, "ticket": number} for team, number in teams],
         "claims": [
             {"id": c.id, "team": name, "ticket": number, "status": c.status, "songs_played": c.songs_played, "detail": c.detail}

@@ -30,9 +30,10 @@ def csrf_token(client, path="/login"):
     assert match, f"no CSRF token found on {path}"
     return match.group(1)
 
-def add_user(app, username="host", password=PASSWORD):
+
+def add_user(app, username="host", password=PASSWORD, **flags):
     with Session(app.state.engine) as session:
-        user = User(username=username, password_hash=hash_password(password))
+        user = User(username=username, password_hash=hash_password(password), **flags)
         session.add(user)
         session.commit()
         session.refresh(user)
@@ -81,7 +82,7 @@ def upload(client, name, content, content_type="audio/mpeg"):
 
 @pytest.fixture
 def logged_in(app, client):
-    add_user(app)
+    add_user(app, is_admin=True)  # the first host is the administrator, as after /setup
     login(client)
     return client
 

@@ -3,8 +3,21 @@
 {% block content %}
 <div class="row spread">
   <h1>Games</h1>
-  <a class="button" href="/games/new">New game</a>
+  {% if user.can_create_games %}<a class="button" href="/games/new">New game</a>
+  {% else %}<span class="muted">Your account can't create new games.</span>{% endif %}
 </div>
+{% if user.can_create_games %}
+<section class="card">
+  <h2>Import a game</h2>
+  <form method="post" action="/games/import" enctype="multipart/form-data" class="row">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="file" name="bundle" accept=".zip,application/zip" required>
+    <button type="submit">Import</button>
+  </form>
+  <p class="muted">Choose a <code>.musicbingo.zip</code> file exported from any Music Bingo install. You get a new
+    game with a new join code and the same tickets; songs already in your library are reused.</p>
+</section>
+{% endif %}
 <section class="card">
   {% if games %}
   <div class="scroll">

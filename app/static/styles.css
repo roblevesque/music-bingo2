@@ -142,3 +142,25 @@ li.rejected { color: var(--muted); }
 .brand-preview-footer { text-align: center; font-size: 0.7rem; color: #666; padding: 0.25rem; }
 input[type=color] { width: 4.5rem; height: 2.6rem; padding: 0.15rem; cursor: pointer; }
 .row label.color-field { flex: 0 0 auto; min-width: 0; }
+
+/* ---- phase 6: host console layout ---- */
+.console-grid { display: block; }
+.claim-alert { margin: 0 0 1rem; padding: 0.8rem 1rem; border-radius: 8px; font-weight: 700;
+  background: var(--accent); color: var(--accent-text); }
+.scroll-list { max-height: 24rem; overflow-y: auto; }
+ol.playlist { padding-left: 2.2rem; }
+ol.playlist li { padding: 0.1rem 0; }
+ol.playlist li.next { font-weight: 700; color: var(--accent); }
+details.played-details { margin-top: 0.8rem; }
+details.played-details summary { cursor: pointer; font-weight: 600; margin-bottom: 0.4rem; }
+@media (min-width: 1000px) {
+  main:has(.console-wide) { max-width: 1400px; }  /* the console uses the width of a big screen */
+  .console-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 0 1rem; align-items: start; }
+  #upcoming { max-height: 40vh; min-height: 8rem; }   /* the list the host looks at most */
+  #played { max-height: 20vh; min-height: 4rem; }
+}
+
+/* ---- phase 6: accounts and game files ---- */
+.credentials { border-color: var(--accent); }
+.credentials code.secret { font-size: 1.3rem; letter-spacing: 0.08em; user-select: all; }
+a.who { color: var(--muted); }

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Account &middot; Music Bingo{% endblock %}
+{% block content %}
+<h1>Your account</h1>
+{% if forced %}<p class="flash info">You are using a temporary password. Choose your own to continue.</p>{% endif %}
+{% for error in errors %}<p class="flash error">{{ error }}</p>{% endfor %}
+
+<section class="card narrow">
+  <h2>Change password</h2>
+  <form method="post" action="/account">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>Current password <input type="password" name="current_password" autocomplete="current-password" required></label>
+    <label>New password <span class="muted">({{ min_length }}+ characters)</span>
+      <input type="password" name="new_password" autocomplete="new-password" minlength="{{ min_length }}" required></label>
+    <label>Confirm new password
+      <input type="password" name="confirm" autocomplete="new-password" minlength="{{ min_length }}" required></label>
+    <button type="submit">Change password</button>
+  </form>
+  <p class="muted">Changing it signs you out of your other browsers and devices.</p>
+</section>
+
+<section class="card narrow">
+  <h2>{{ user.username }}</h2>
+  <p>{{ 'Administrator. ' if user.is_admin else '' }}{{ 'You can create games.' if user.can_create_games else "You can't create new games; ask an administrator if you need to." }}</p>
+</section>
+{% endblock %}

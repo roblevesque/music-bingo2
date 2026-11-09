@@ -15,10 +15,10 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import Settings, load_settings
 from app.db import init_db, make_engine
-from app.deps import LoginRequired
-from app.routes import auth, branding, games, library, play, run
+from app.deps import LoginRequired, PasswordChangeRequired
+from app.routes import auth, branding, games, library, play, run, transfer, users
 from app.services.events import Hub
-from app.web import BASE_DIR, error_page
+from app.web import BASE_DIR, error_page, flash
 
 
 ERROR_TITLES = {
@@ -105,10 +105,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         except Exception:  # even the error page failed: send the simplest possible answer
             return HTMLResponse("<h1>Something went wrong</h1>", status_code=500)
 
+    @app.exception_handler(PasswordChangeRequired)
+    async def password_change_required(request: Request, _exc: PasswordChangeRequired):
+        flash(request, "Please choose a new password before continuing.", "info")
+        return RedirectResponse("/account", status_code=303)
+
     app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
     app.include_router(auth.router)
     app.include_router(library.router)
+    app.include_router(transfer.router)  # before games: /games/import must not be read as a game id
     app.include_router(games.router)
+    app.include_router(users.router)
     app.include_router(branding.router)
     app.include_router(run.router)
     app.include_router(play.router)

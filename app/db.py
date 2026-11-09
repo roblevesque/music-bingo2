@@ -22,6 +22,14 @@ def make_engine(url: str):
 # missing *tables*, so these are added by hand. Add Alembic before real users depend
 # on the data; until then this keeps development databases working.
 ADDITIVE_COLUMNS = {
+    "user": [
+        ("is_admin", "INTEGER NOT NULL DEFAULT 0"),
+        ("can_create_games", "INTEGER NOT NULL DEFAULT 1"),
+        ("is_active", "INTEGER NOT NULL DEFAULT 1"),
+        ("must_change_password", "INTEGER NOT NULL DEFAULT 0"),
+        ("token_version", "INTEGER NOT NULL DEFAULT 0"),
+    ],
+    "song": [("sha256", "TEXT NOT NULL DEFAULT ''")],
     "game": [
         ("current_round", "INTEGER NOT NULL DEFAULT 1"),
         ("series_id", "INTEGER"),
@@ -42,9 +50,19 @@ def apply_additive_migrations(engine) -> None:
                     connection.execute(text(f'ALTER TABLE "{table}" ADD COLUMN "{name}" {definition}'))
 
 
+def ensure_an_admin(engine) -> None:
+    """Accounts that predate permissions have no admin: the first account made becomes one."""
+    with engine.begin() as connection:
+        connection.execute(text(
+            'UPDATE "user" SET is_admin = 1 WHERE id = (SELECT MIN(id) FROM "user") '
+            'AND NOT EXISTS (SELECT 1 FROM "user" WHERE is_admin = 1)'
+        ))
+
+
 def init_db(engine) -> None:
     SQLModel.metadata.create_all(engine)
     apply_additive_migrations(engine)
+    ensure_an_admin(engine)
 
 
 def get_session(request: Request):

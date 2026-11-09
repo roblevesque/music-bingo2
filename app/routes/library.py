@@ -22,6 +22,7 @@ from app.services.clips import (
     save_upload,
     write_tags,
 )
+from app.services.gameio import sha256_file
 from app.services.parsing import format_time_ms, normalize_tags, parse_time_ms
 from app.web import flash, render
 
@@ -100,6 +101,7 @@ async def upload(
             dest.unlink(missing_ok=True)
             problems.append(f"{name}: {exc}")
             continue
+        digest = await run_in_threadpool(sha256_file, dest)
         session.add(
             Song(
                 owner_id=user.id,
@@ -108,6 +110,7 @@ async def upload(
                 title=(info.title or Path(name).stem)[:MAX_TEXT],
                 artist=info.artist[:MAX_TEXT],
                 duration_ms=info.duration_ms,
+                sha256=digest,
             )
         )
         added += 1
@@ -196,6 +199,8 @@ async def edit_submit(
         except Exception:  # keep the database edit even if the file can't be retagged
             flash(request, "Saved, but the tags inside the audio file could not be updated.", "error")
 
+    if write_tags_to_file:
+        song.sha256 = ""  # the file's bytes changed; the checksum is refreshed when next needed
     song.title, song.artist = title, artist
     song.tags = normalize_tags(tags)
     song.start_ms, song.end_ms = start_ms, end_ms

@@ -39,7 +39,7 @@
   <p><a class="button" href="/games/{{ game.id }}/run">{% if game.status == 'draft' %}Open host console{% else %}Back to host console{% endif %}</a></p>
 </section>
 
-{% if game.status == 'finished' %}
+{% if game.status == 'finished' and user.can_create_games %}
 <section class="card">
   <h2>Run this game again</h2>
   <p class="muted">Creates a new run with a new join code, the same songs and rounds, and fresh teams.
@@ -64,6 +64,21 @@
   </ul>
 </section>
 {% endif %}
+
+<section class="card">
+  <h2>Export this game</h2>
+  <form method="get" action="/games/{{ game.id }}/export" class="row">
+    <label>Contents
+      <select name="audio">
+        <option value="1" selected>With audio (a complete copy)</option>
+        <option value="0">Without audio (small; the other library needs the songs)</option>
+      </select>
+    </label>
+    <button type="submit">Download</button>
+  </form>
+  <p class="muted">The file holds the songs' details, the rounds and the exact tickets, so printed tickets stay
+    valid when it is imported elsewhere. Teams and results aren't included.</p>
+</section>
 
 <section class="card">
   <h2>Rounds</h2>

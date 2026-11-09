@@ -19,11 +19,18 @@ Inspired by [asrashley/music-bingo](https://github.com/asrashley/music-bingo). S
 - **Live play:** players join with a game code and a team name (no accounts), tap squares to mark
   them, and call Bingo. The server checks each claim against the songs actually played.
 - **Host console:** start, next song, replay, pause, skip, reshuffle the songs not yet played, move
-  to the next round, end the game. Optional automatic next song and fade in/out.
+  to the next round, end the game. It lists every song still to come, in play order, beside the ones
+  already played, and shows a banner the moment a team calls a valid bingo. On a wide screen the
+  controls and claims sit on the left and the playlist and teams on the right. Optional automatic next
+  song and fade in/out.
 - **Printed tickets:** download every ticket as one numbered PDF, hand them out, and check a paper
   ticket by number from the console.
 - **Ticket branding:** add your logo, an accent colour, and header and footer text from the web
   interface. They appear on the printed PDF and on the tickets players see.
+- **Users and permissions:** administrators add accounts (with a generated one-time password) and choose
+  who can create games. Passwords are changed from the Account page.
+- **Move a game between installs:** export a game, with its audio if you like, as one file and import it
+  elsewhere. The tickets stay identical, so printed ones still work.
 - **Run again:** re-run a finished game under a new join code, keeping the same tickets so printed
   copies stay valid (or regenerating them).
 - **Phone friendly:** layouts tested at 375 px wide, with live updates that reconnect after a dropped
@@ -66,6 +73,7 @@ All optional, set as environment variables.
 | `MUSICBINGO_DATA_DIR` | `./data` | SQLite database (`bingo.db3`), uploaded clips, generated secret key |
 | `MUSICBINGO_SECRET_KEY` | generated into `data/secret_key` | Signs session cookies |
 | `MUSICBINGO_MAX_UPLOAD_MB` | `50` | Per-file upload limit |
+| `MUSICBINGO_MAX_IMPORT_MB` | `300` | Largest game file (with audio) that can be imported |
 | `MUSICBINGO_HTTPS_ONLY` | `0` | Set to `1` when served over HTTPS so cookies are marked Secure |
 | `MUSICBINGO_PDF_FONT` | built-in font | Path to a `.ttf` so printed tickets can show titles in other alphabets |
 | `MUSICBINGO_PDF_FONT_BOLD` | same as above | Optional bold `.ttf` to go with it |
@@ -147,6 +155,36 @@ docker compose cp musicbingo:/data/backups ./backups
 To restore into a fresh container, copy the archive in with `docker compose cp` and run
 `python -m app.backup restore <archive> --data-dir /data --force` inside it, then restart.
 
+## Users and permissions
+
+The first account, made on the `/setup` page, is an administrator. Administrators open **Users** in the
+menu to:
+
+- **Add an account.** A random password is generated and shown once, for you to pass on. The new user
+  must choose their own at first login.
+- **Set permissions.** *Can create games* covers creating, importing and running a game again;
+  without it a user can still use the library and branding and run any games they already have.
+  *Administrator* lets a user manage accounts.
+- **Reset a password** (a new temporary one is shown once and the user is signed out everywhere), or
+  **disable** an account (it can't log in, and open sessions end). Accounts can't be deleted, so that the
+  songs and games they own are never lost.
+
+The last active administrator can't be demoted or disabled, which keeps you from locking everyone out.
+Anyone can change their own password from **Account** (their name in the header); that signs out their
+other browsers. There is no email, so a forgotten password is reset by an administrator.
+
+## Moving a game between installs
+
+Open a game and use **Export this game**. You get one `.musicbingo.zip` file holding the songs'
+details (title, artist, tags, start and end points), the rounds and the exact tickets, with the audio
+too if you choose. Teams and results are not included.
+
+On the other install, use **Import a game** on the Games page. Songs already in that library are
+recognised by their audio checksum and reused; the rest come from the file. The result is a new game
+with a new join code and the same tickets. If the file was exported without audio and a song is
+missing from the library, the import stops with a message and creates nothing. Files are validated
+strictly, so a damaged or hostile file is refused.
+
 ## Game night checklist
 
 Before:
@@ -184,6 +222,8 @@ app/
     library.py       song library
     games.py         games, rounds, tickets, PDF download, run again
     branding.py      ticket branding page, logo files, PDF preview
+    users.py         user management and the Account page
+    transfer.py      game export and import
     run.py           host console and its actions
     play.py          joining, marking, claiming (player side)
   services/          pure Python where possible (no web framework)
@@ -192,6 +232,8 @@ app/
     ticket_gen.py    ticket generation
     playlist.py      play order
     series.py        runs of the same game
+    permissions.py   account rules
+    gameio.py        the game export file format
     events.py        live-update hub (Server-Sent Events)
     snapshots.py     state sent to players and to the host
     pdf.py           printable tickets (reportlab)
@@ -230,7 +272,7 @@ Dockerfile, compose.yaml, .dockerignore
 ## Upgrading
 
 New tables are created on start-up. Columns added to existing tables since the first release
-(`game.current_round`, `game.series_id`, `game.run_number`) are added by a small built-in migration,
+(`game.current_round`, `game.series_id`, `game.run_number`, the account flags on `user`, `song.sha256`) are added by a small built-in migration,
 so an existing `data/bingo.db3` keeps working. Add Alembic before real users depend on the data.
 
 ## Known limitations
@@ -241,6 +283,7 @@ so an existing `data/bingo.db3` keeps working. Add Alembic before real users dep
 - Browsers may block audio until the page has been clicked. If a clip doesn't start, press Replay.
 - Printed tickets use a built-in font that covers Western European text. Other alphabets print as `?`
   unless you set `MUSICBINGO_PDF_FONT`.
+- Accounts can be disabled but not deleted, and there is no email-based password recovery.
 - A song that is in a game's pool can't be deleted from the library until that game is deleted.
   Rounds that have been played, or are in play, can't be deleted.
 - Branding belongs to the host account and applies to all of that host's games. Logos are shrunk to

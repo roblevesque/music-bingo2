@@ -53,6 +53,7 @@ if (root) {
   };
   const showError = (message) => { errorBox.textContent = message; errorBox.hidden = false; };
   const clearError = () => { errorBox.hidden = true; };
+  const songLine = (s) => `${s.title}${s.artist ? " \u2014 " + s.artist : ""}`;
 
   async function post(action, fields = {}) {
     const body = new FormData();
@@ -238,6 +239,24 @@ if (root) {
       li.value = p.n; // keep the real song number even though newest is listed first
       return li;
     }));
+
+    const queue = state.upcoming.map((s, i) => {
+      const li = el("li", songLine(s), i === 0 ? "next" : "");
+      li.value = s.n; // the number the song will have when it is played
+      return li;
+    });
+    const emptyQueue = draft ? "The play order is made when you start the game." : "No songs left.";
+    $("#upcoming").replaceChildren(...(queue.length ? queue : [el("li", emptyQueue, "muted")]));
+    $("#upcoming-count").textContent = state.upcoming.length ? `(${state.upcoming.length})` : "";
+    $("#played-count").textContent = state.played.length ? `(${state.played.length})` : "";
+
+    // A valid bingo is the thing the host most needs to notice, so it gets a banner.
+    const wins = state.claims.filter((c) => c.status === "win").reverse(); // oldest first, so ties read in order
+    const banner = $("#claim-alert");
+    banner.hidden = wins.length === 0;
+    banner.textContent = wins.length
+      ? "Bingo called! " + wins.map((w) => `${w.team} (ticket ${w.ticket}) after song ${w.songs_played}: ${w.detail}`).join(" \u2022 ")
+      : "";
 
     renderRules();
   }

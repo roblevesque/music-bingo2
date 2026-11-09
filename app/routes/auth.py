@@ -8,6 +8,7 @@ from sqlmodel import Session, select
 
 from app.db import get_session
 from app.models import User
+from app.services.permissions import MIN_PASSWORD_LENGTH, USERNAME_RE
 from app.security import (
     DUMMY_HASH,
     check_csrf,
@@ -20,8 +21,6 @@ from app.web import flash, render
 
 router = APIRouter()
 
-USERNAME_RE = re.compile(r"^[a-z0-9_.-]{3,32}$")
-MIN_PASSWORD_LENGTH = 10
 
 
 def _redirect(url: str) -> RedirectResponse:
@@ -35,6 +34,7 @@ def _has_users(session: Session) -> bool:
 def _start_session(request: Request, user: User) -> None:
     request.session.clear()  # drop any pre-login state, including the old CSRF token
     request.session["user_id"] = user.id
+    request.session["ver"] = user.token_version
 
 
 @router.get("/")
@@ -75,7 +75,7 @@ def setup_submit(
         errors.append("Passwords do not match.")
     if errors:
         return render(request, "setup.html", status_code=400, form={"username": username}, errors=errors)
-    user = User(username=username, password_hash=hash_password(password))
+    user = User(username=username, password_hash=hash_password(password), is_admin=True)  # the first host administers
     session.add(user)
     session.commit()
     session.refresh(user)
@@ -104,7 +104,7 @@ def login_submit(
     username = username.strip().lower()
     user = session.exec(select(User).where(User.username == username)).first()
     password_ok = verify_password(user.password_hash if user else DUMMY_HASH, password)
-    if user is None or not password_ok:
+    if user is None or not password_ok or not user.is_active:
         return render(
             request,
             "login.html",
