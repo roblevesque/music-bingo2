@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from io import BytesIO
 
 from reportlab.lib.colors import HexColor, black, gray
-from reportlab.lib.pagesizes import A4, letter
+from reportlab.lib.pagesizes import A4, letter, landscape
 from reportlab.lib.utils import ImageReader, simpleSplit
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfgen import canvas
@@ -199,13 +199,13 @@ def build_tickets_pdf(
         logo = ImageReader(BytesIO(brand.logo_png)) if brand.logo_png else None
     except Exception:  # an unreadable logo must never stop tickets from printing
         logo = None
-    page_w, page_h = PAPER_SIZES[paper]
+    page_h, page_w = PAPER_SIZES[paper]
     cols, rows = TICKETS_PER_PAGE[per_page]
     slot_w = (page_w - 2 * PAGE_MARGIN) / cols
     slot_h = (page_h - 2 * PAGE_MARGIN) / rows
 
     buffer = BytesIO()
-    c = canvas.Canvas(buffer, pagesize=(page_w, page_h))
+    c = canvas.Canvas(buffer, pagesize=landscape(PAPER_SIZES[paper]))
     c.setTitle(printable(f"{game_name} tickets", fonts))
     for index, (number, cells) in enumerate(tickets):
         slot = index % per_page

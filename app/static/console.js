@@ -18,6 +18,8 @@ if (root) {
   const autoSeconds = $("#auto-seconds");
   const fadeSeconds = $("#fade-seconds");
   const autoStatus = $("#auto-status");
+  const effectAudio = $("#effect-audio");
+  const effectsBox = $("#effects");
 
   let state = JSON.parse(document.querySelector("#initial-state").textContent);
   let playing = null; // the song whose start/end window is playing
@@ -27,6 +29,8 @@ if (root) {
   let countdownTimer = null; // running while we wait to play the next song automatically
   let autoHold = false; // a team has called a valid bingo: don't auto-play until the host moves on
   let windowStop = false; // we paused the audio ourselves at the end of the clip window
+  let activeEffect = null; // the sound effect that is playing, if any
+  let effectsSignature = ""; // so the effect buttons are only rebuilt when the list changes
   let knownClaims = new Set(state.claims.map((c) => c.id));
 
   // Playback settings are remembered in this browser (they belong to the host's setup, not the game).
@@ -111,6 +115,56 @@ if (root) {
     else cancelCountdown(); // the host paused: don't start the next song behind their back
   });
   audio.addEventListener("ended", onClipFinished);
+
+  // ---- sound effects: the list comes from the server, so the buttons follow it
+  function renderEffects() {
+    const effects = state.effects || [];
+    const signature = JSON.stringify(effects);
+    if (signature !== effectsSignature) {
+      effectsSignature = signature;
+      effectsBox.replaceChildren(...effects.map((effect, index) => {
+        const button = el("button", `${effect.label} (${index + 1})`, "secondary");
+        button.type = "button";
+        button.dataset.effect = effect.id;
+        button.addEventListener("click", () => triggerEffect(effect));
+        return button;
+      }));
+    }
+    [...effectsBox.children].forEach((button) => {
+      const on = Boolean(activeEffect) && button.dataset.effect === activeEffect.id;
+      button.classList.toggle("playing", on);
+      button.setAttribute("aria-pressed", String(on));
+    });
+  }
+  function stopEffect() {
+    effectAudio.pause();
+    activeEffect = null;
+    renderEffects();
+  }
+  function triggerEffect(effect) {
+    if (activeEffect && activeEffect.id === effect.id && effect.loop) { stopEffect(); return; } // press again to stop a loop
+    cancelCountdown(); // a pending automatic next song must not start under an effect
+    if (!audio.paused) audio.pause();
+    effectAudio.pause();
+    effectAudio.src = effect.url;
+    effectAudio.loop = Boolean(effect.loop);
+    effectAudio.volume = 1;
+    activeEffect = effect;
+    effectAudio.play().catch(() => {
+      activeEffect = null;
+      renderEffects();
+      showError("Your browser blocked the sound. Click the button again.");
+    });
+    renderEffects();
+  }
+  effectAudio.addEventListener("ended", () => { activeEffect = null; renderEffects(); });
+  document.addEventListener("keydown", (event) => {
+    if (event.ctrlKey || event.metaKey || event.altKey || event.target.closest?.("input, textarea, select, [contenteditable]")) return;
+    const effects = state.effects || [];
+    const index = Number(event.key) - 1;
+    if (Number.isInteger(index) && index >= 0 && index < effects.length) { event.preventDefault(); triggerEffect(effects[index]); }
+    else if (event.key === "Escape" && activeEffect) stopEffect();
+  });
 
   // ---- automatic next song
   function setAutoStatus(text) { autoStatus.textContent = text; }
@@ -259,6 +313,7 @@ if (root) {
       : "";
 
     renderRules();
+    renderEffects();
   }
 
   // ---- buttons
@@ -274,7 +329,7 @@ if (root) {
   $("#btn-finish").addEventListener("click", async () => {
     if (!window.confirm("End the game for everyone?")) return;
     const d = await post("finish");
-    if (d) { audio.pause(); render(d); }
+    if (d) { audio.pause(); stopEffect(); render(d); }
   });
   $("#btn-next-round").addEventListener("click", async () => {
     const d = await post("round", { number: state.round.number + 1 });

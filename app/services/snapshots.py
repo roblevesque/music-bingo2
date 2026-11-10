@@ -8,6 +8,7 @@ from sqlalchemy import func
 from sqlmodel import Session, select
 
 from app.models import Claim, Game, GameSong, Round, Song, Team, Ticket
+from app.services.effects import available_effects
 from app.services.events import HOST, PLAYERS, Event, Hub
 from app.services.patterns import describe_rules
 from app.services.playlist import played_ids
@@ -129,6 +130,7 @@ def host_state(session: Session, game: Game, join_url: str) -> dict:
             for c, name, number in claims
         ],
         "winners": _winners(session, game),
+        "effects": available_effects(game.owner_id),
     }
 
 

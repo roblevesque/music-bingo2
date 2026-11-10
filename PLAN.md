@@ -65,7 +65,8 @@ Or in Docker: `docker compose up --build`.
 - [ ] Related to above perhaps, but host console more completely and effectively using screen real estate
 - [X] Game import/export
 - [X] Permissions model to allow some users to add more users, or deny others the abillity to create games
-- [ ] Host triggerable sfx events. For example, 'thinking' music while checking tickets, win and lose sfx. 
+- [X] Host triggerable sfx events (built-in win, lose and thinking sounds). For example, 'thinking' music while checking tickets, win and lose sfx. 
+- [ ] Configurable sound effects: choose from an assortment, or upload your own
 - [ ] Pre and post game music playing. Possibly from commercial service, or from pool of music already available. 
 - [ ] Host remote. Allow host to pause music, trigger events from mobile device
 

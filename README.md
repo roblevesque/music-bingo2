@@ -23,6 +23,8 @@ Inspired by [asrashley/music-bingo](https://github.com/asrashley/music-bingo). S
   already played, and shows a banner the moment a team calls a valid bingo. On a wide screen the
   controls and claims sit on the left and the playlist and teams on the right. Optional automatic next
   song and fade in/out.
+- **Sound effects:** one-click (or number-key) *Thinking*, *Win* and *Lose* sounds from the host console, for
+  the moments around checking a claim.
 - **Printed tickets:** download every ticket as one numbered PDF, hand them out, and check a paper
   ticket by number from the console.
 - **Ticket branding:** add your logo, an accent colour, and header and footer text from the web
@@ -103,6 +105,20 @@ See [Backups](#backups) for how to back up safely.
 10. **Paper tickets:** type the ticket number into **Check a printed ticket** to see whether it wins the
    current round, and what it is still missing.
 11. **Afterwards:** **End game**, then **Run this game again** from the game page.
+
+### Sound effects
+
+The console has a **Sound effects** card with three built-in effects: **Thinking** (a ticking loop to play
+while you check a claim), **Win** and **Lose**. Click one, or press its number key (1, 2, 3). Esc, or
+pressing **Thinking** again, stops it. An effect pauses the current song and cancels any pending automatic
+next song, so press Resume or Next song when you are ready to carry on. Effects play from the host's
+computer, like the songs, so players hear them in the room.
+
+The effects are original sounds synthesised by `scripts/generate_effects.py` (standard library only).
+To change them, edit the notes there and run `uv run python scripts/generate_effects.py`; a test checks
+that the committed files match the script. The console builds its buttons from the list in
+`app/services/effects.py`, so offering more effects, or your own uploads, later means changing that list
+rather than the page.
 
 ### Automatic next song and fades
 
@@ -233,6 +249,7 @@ app/
     playlist.py      play order
     series.py        runs of the same game
     permissions.py   account rules
+    effects.py       the list of sound effects offered in the console
     gameio.py        the game export file format
     events.py        live-update hub (Server-Sent Events)
     snapshots.py     state sent to players and to the host
@@ -242,7 +259,9 @@ app/
     clips.py         audio files and tags (mutagen)
     parsing.py       tags and time values
   templates/         Jinja pages
-  static/            styles.css and plain ES modules (app, play, console, live, playback)
+  static/            styles.css, plain ES modules (app, play, console, live, playback, branding),
+                     effects/ (the built-in WAV sounds)
+scripts/              generate_effects.py (rebuilds the built-in sounds)
 tests/
 Dockerfile, compose.yaml, .dockerignore
 ```

@@ -160,6 +160,8 @@ details.played-details summary { cursor: pointer; font-weight: 600; margin-botto
   #played { max-height: 20vh; min-height: 4rem; }
 }
 
+button.secondary.playing { background: var(--accent); color: var(--accent-text); }
+
 /* ---- phase 6: accounts and game files ---- */
 .credentials { border-color: var(--accent); }
 .credentials code.secret { font-size: 1.3rem; letter-spacing: 0.08em; user-select: all; }

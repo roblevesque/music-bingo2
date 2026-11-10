@@ -15,7 +15,7 @@ def password_from(response):
     return re.search(r'class="secret">([^<]+)<', response.text).group(1)
 
 
-def create_account(admin, username="dj", **fields):
+def create_account(admin, username="djay", **fields):
     data = {"username": username, "csrf_token": csrf_token(admin, "/users")}
     data.update(fields)
     return admin.post("/users", data=data)
@@ -54,12 +54,12 @@ def test_only_administrators_can_manage_users(app, logged_in):
 
 
 def test_a_new_account_gets_a_one_time_password_and_must_change_it(app, logged_in):
-    response = create_account(logged_in, "dj")
+    response = create_account(logged_in, "djay")
     assert response.status_code == 200 and "shown only now" in response.text
     temporary = password_from(response)
-    assert user_row(app, "dj").must_change_password and temporary not in logged_in.get("/users").text
+    assert user_row(app, "djay").must_change_password and temporary not in logged_in.get("/users").text
 
-    dj, login_response = sign_in(app, "dj", temporary)
+    dj, login_response = sign_in(app, "djay", temporary)
     assert login_response.status_code == 303
     forced = dj.get("/library", follow_redirects=False)  # nothing works until the password is changed
     assert forced.status_code == 303 and forced.headers["location"] == "/account"
@@ -67,16 +67,16 @@ def test_a_new_account_gets_a_one_time_password_and_must_change_it(app, logged_i
 
     assert finish_password_change(dj, temporary).status_code == 303
     assert dj.get("/library", follow_redirects=False).status_code == 200
-    assert not user_row(app, "dj").must_change_password
-    assert sign_in(app, "dj", temporary)[1].status_code == 401  # the temporary one no longer works
+    assert not user_row(app, "djay").must_change_password
+    assert sign_in(app, "djay", temporary)[1].status_code == 401  # the temporary one no longer works
 
 
 def test_account_creation_is_validated(app, logged_in):
     assert create_account(logged_in, "x").status_code == 400
     assert create_account(logged_in, "Bad Name!").status_code == 400
     assert create_account(logged_in, "host").status_code == 400  # taken
-    assert create_account(logged_in, "dj").status_code == 200
-    assert create_account(logged_in, "DJ").status_code == 400  # names are case-insensitive
+    assert create_account(logged_in, "djay").status_code == 200
+    assert create_account(logged_in, "DJAY").status_code == 400  # names are case-insensitive
 
 
 def test_changing_a_password_checks_the_old_one_and_the_rules(app, logged_in):
