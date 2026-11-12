@@ -117,6 +117,26 @@
         </details>
       </section>
 
+      <section class="card" id="remote-card">
+        <h2>Phone remote</h2>
+        <div id="remote-intro">
+          <p class="muted">Run the game from your phone: next song, pause, sound effects. This computer keeps
+            playing the audio, so leave this window open.</p>
+          <button id="remote-turn-on" type="button">Turn on the remote</button>
+        </div>
+        <div id="remote-panel" hidden>
+          <p>On your phone, open <strong id="remote-url"></strong> and enter the code</p>
+          <p><strong class="code" id="remote-code"></strong></p>
+          <p class="muted"><span id="remote-count"></span> <span id="remote-last"></span></p>
+          <p class="muted">If a song doesn't start from the phone, click anywhere in this window once, so the
+            browser allows sound. Keep only one console window open.</p>
+          <div class="row">
+            <button id="remote-new" type="button" class="secondary">New code (disconnects phones)</button>
+            <button id="remote-turn-off" type="button" class="secondary danger">Turn off</button>
+          </div>
+        </div>
+      </section>
+
       <section class="card">
         <h2>Check a printed ticket</h2>
         <form id="check-form" class="row">

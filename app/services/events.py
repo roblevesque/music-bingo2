@@ -12,6 +12,7 @@ from dataclasses import dataclass
 
 PLAYERS = "players"
 HOST = "host"
+REMOTE = "remote"  # phones paired with the host console
 
 
 @dataclass(frozen=True)

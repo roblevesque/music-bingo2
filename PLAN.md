@@ -67,8 +67,8 @@ Or in Docker: `docker compose up --build`.
 - [X] Permissions model to allow some users to add more users, or deny others the abillity to create games
 - [X] Host triggerable sfx events (built-in win, lose and thinking sounds). For example, 'thinking' music while checking tickets, win and lose sfx. 
 - [ ] Configurable sound effects: choose from an assortment, or upload your own
-- [ ] Pre and post game music playing. Possibly from commercial service, or from pool of music already available. 
-- [ ] Host remote. Allow host to pause music, trigger events from mobile device
+- [X] Pre and post game music playing (plays the host's whole library, shuffled; a commercial service was left out). Possibly from commercial service, or from pool of music already available. 
+- [X] Host remote (pair a phone with a code; next song, pause, replay, skip, effects, bingo alert). Allow host to pause music, trigger events from mobile device
 
 ---
 

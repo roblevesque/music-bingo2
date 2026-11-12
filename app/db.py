@@ -34,6 +34,7 @@ ADDITIVE_COLUMNS = {
         ("current_round", "INTEGER NOT NULL DEFAULT 1"),
         ("series_id", "INTEGER"),
         ("run_number", "INTEGER NOT NULL DEFAULT 1"),
+        ("remote_code", "TEXT NOT NULL DEFAULT ''"),
     ],
 }
 

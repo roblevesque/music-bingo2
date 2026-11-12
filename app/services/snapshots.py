@@ -9,9 +9,10 @@ from sqlmodel import Session, select
 
 from app.models import Claim, Game, GameSong, Round, Song, Team, Ticket
 from app.services.effects import available_effects
-from app.services.events import HOST, PLAYERS, Event, Hub
+from app.services.events import HOST, PLAYERS, REMOTE, Event, Hub
 from app.services.patterns import describe_rules
 from app.services.playlist import played_ids
+from app.services.remote import remote_view
 
 
 def audio_url(song_id: int) -> str:
@@ -72,7 +73,7 @@ def public_state(session: Session, game: Game) -> dict:
     }
 
 
-def host_state(session: Session, game: Game, join_url: str) -> dict:
+def host_state(session: Session, game: Game, join_url: str, remote: dict | None = None) -> dict:
     order = list(game.play_order)
     songs = {}
     if order:
@@ -131,10 +132,32 @@ def host_state(session: Session, game: Game, join_url: str) -> dict:
         ],
         "winners": _winners(session, game),
         "effects": available_effects(game.owner_id),
+        "remote": remote or {"enabled": bool(game.remote_code), "code": game.remote_code, "url": "", "connected": 0},
     }
+
+
+def console_online(hub: Hub, game: Game) -> bool:
+    return hub.subscriber_count(game.id, HOST) > 0
+
+
+def remote_info(hub: Hub, game: Game, join_url: str) -> dict:
+    """What the host console shows about the phone remote (the code is for the host's eyes only)."""
+    return {
+        "enabled": bool(game.remote_code),
+        "code": game.remote_code,
+        "url": join_url.rsplit("/join/", 1)[0] + "/remote" if join_url else "",
+        "connected": hub.subscriber_count(game.id, REMOTE),
+    }
+
+
+def remote_state(session: Session, game: Game, hub: Hub) -> dict:
+    """The snapshot a phone starts from."""
+    return remote_view(host_state(session, game, ""), console_online(hub, game))
 
 
 def broadcast(hub: Hub, session: Session, game: Game, join_url: str) -> None:
     """Push fresh snapshots to everyone watching this game."""
+    host = host_state(session, game, join_url, remote=remote_info(hub, game, join_url))
     hub.publish(game.id, PLAYERS, Event("state", public_state(session, game)))
-    hub.publish(game.id, HOST, Event("state", host_state(session, game, join_url)))
+    hub.publish(game.id, HOST, Event("state", host))
+    hub.publish(game.id, REMOTE, Event("state", remote_view(host, console_online(hub, game))))

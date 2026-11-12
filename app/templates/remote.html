@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Remote &middot; {{ game.name }}{% endblock %}
+{% block content %}
+<div id="remote" class="remote-page" data-id="{{ game.id }}" data-csrf="{{ csrf_token }}">
+  <h1 class="remote-title" id="r-title">{{ game.name }}</h1>
+  <p id="r-offline" class="flash error" role="alert" hidden>The host console isn't open, so the buttons are paused.
+    Open it on the host computer.</p>
+  <p id="r-win" class="claim-alert" role="alert" aria-live="assertive" hidden></p>
+
+  <section class="card">
+    <p class="muted" id="r-round"></p>
+    <p><strong id="r-now">Nothing yet</strong> <span id="r-now-artist" class="muted"></span></p>
+    <p class="muted">Up next: <span id="r-next-song">&mdash;</span></p>
+    <p class="muted" id="r-progress"></p>
+  </section>
+
+  <div class="remote-grid">
+    <button id="r-start" type="button" class="remote-btn wide" hidden>Start game</button>
+    <button id="r-next" type="button" class="remote-btn wide">Next song</button>
+    <button id="r-pause" type="button" class="remote-btn secondary">Pause / Resume</button>
+    <button id="r-replay" type="button" class="remote-btn secondary">Replay</button>
+    <button id="r-skip" type="button" class="remote-btn secondary">Skip next</button>
+    <button id="r-next-round" type="button" class="remote-btn secondary" hidden>Next round</button>
+  </div>
+
+  <h2>Sound effects</h2>
+  <div id="r-effects" class="remote-grid"></div>
+  <button id="r-stop-effect" type="button" class="remote-btn secondary stop">Stop effect</button>
+
+  <p id="r-toast" class="muted" role="status" aria-live="polite"></p>
+  <p id="r-connection" class="muted"></p>
+  <form method="post" action="/remote/{{ game.id }}/leave">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button class="link" type="submit">Disconnect this phone</button>
+  </form>
+</div>
+<script type="application/json" id="initial-state">{{ state|tojson }}</script>
+{% endblock %}
+{% block scripts %}<script type="module" src="{{ static_url('remote.js') }}"></script>{% endblock %}

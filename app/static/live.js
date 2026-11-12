@@ -21,7 +21,7 @@ export function statusText(status) {
 }
 
 /** Connect to `url`. onState(snapshot) gets every state event; onStatus(name) reports health. */
-export function connectLive(url, { onState, onStatus }) {
+export function connectLive(url, { onState, onStatus, events = {} }) {
   let source = null;
   let retryTimer = null;
   let attempts = 0;
@@ -36,6 +36,9 @@ export function connectLive(url, { onState, onStatus }) {
     source = new EventSource(url);
     source.addEventListener("state", (event) => { seen(); onState(JSON.parse(event.data)); });
     source.addEventListener("ping", seen);
+    for (const [name, handler] of Object.entries(events)) { // e.g. a phone's commands, or a console coming online
+      source.addEventListener(name, (event) => { seen(); handler(JSON.parse(event.data)); });
+    }
     source.onopen = () => { attempts = 0; seen(); onStatus("live"); };
     source.onerror = () => {
       if (source.readyState === CONNECTING) onStatus("reconnecting"); // the browser is retrying

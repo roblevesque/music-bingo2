@@ -70,7 +70,7 @@ if (root) {
   const clearError = () => { errorBox.hidden = true; };
   const songLine = (s) => `${s.title}${s.artist ? " \u2014 " + s.artist : ""}`;
 
-  async function post(action, fields = {}) {
+  async function post(action, fields = {}, options = {}) {
     const body = new FormData();
     body.set("csrf_token", csrf);
     Object.entries(fields).forEach(([key, value]) => body.set(key, value));
@@ -83,7 +83,7 @@ if (root) {
     }
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      showError(typeof data.detail === "string" ? data.detail : "That didn't work.");
+      if (!options.quiet) showError(typeof data.detail === "string" ? data.detail : "That didn't work.");
       return null;
     }
     clearError();
@@ -268,13 +268,64 @@ if (root) {
   }
   function onClipFinished() { if (playing) startCountdown(); }
 
-  async function advance() {
+  async function advance(expect) {
     cancelCountdown();
     autoHold = false;
     setAutoStatus("");
-    const data = await post("next");
+    // From the phone, `expect` is the song count it saw: the server ignores the tap if the game has moved on.
+    const fromPhone = expect !== undefined;
+    const data = await post("next", fromPhone ? { expect: String(expect) } : {}, { quiet: fromPhone });
     if (data) { playSong(data.current_song); render(data); }
   }
+  async function skipNext(expectNext) {
+    const fromPhone = expectNext !== undefined;
+    const data = await post("skip", fromPhone ? { expect_next: String(expectNext) } : {}, { quiet: fromPhone });
+    if (data) render(data);
+  }
+
+  // ---- phone remote: commands arrive over the live connection and act as if the host had clicked
+  const seenCommands = new Set();
+  const COMMAND_NAMES = { next: "Next song", replay: "Replay", pause: "Pause/Resume", skip: "Skip next", start: "Start game",
+    next_round: "Next round", effect: "Sound effect", stop_effect: "Stop effect" };
+  function handleCommand(command) {
+    if (seenCommands.has(command.id)) return; // never act twice on one command
+    seenCommands.add(command.id);
+    // A disabled button means "not allowed right now", so clicking only works when the host could have clicked it.
+    const click = (selector) => { const button = $(selector); if (button && !button.disabled) button.click(); };
+    switch (command.action) {
+      case "next": if (!$("#btn-next").disabled) advance(command.expect); break;
+      case "skip": if (!$("#btn-skip").disabled) skipNext(command.expect_next); break;
+      case "replay": click("#btn-replay"); break;
+      case "pause": click("#btn-pause"); break;
+      case "start": click("#btn-start"); break;
+      case "next_round": click("#btn-next-round"); break;
+      case "effect": {
+        const effect = (state.effects || []).find((e) => e.id === command.effect);
+        if (effect) triggerEffect(effect);
+        break;
+      }
+      case "stop_effect": stopEffect(); break;
+    }
+    $("#remote-last").textContent = `Last from a phone: ${COMMAND_NAMES[command.action] || command.action}`;
+  }
+  function renderRemote() {
+    const remote = state.remote || { enabled: false };
+    $("#remote-intro").hidden = remote.enabled;
+    $("#remote-panel").hidden = !remote.enabled;
+    if (!remote.enabled) return;
+    $("#remote-url").textContent = remote.url || `${window.location.origin}/remote`;
+    $("#remote-code").textContent = remote.code;
+    $("#remote-count").textContent = `${remote.connected} phone${remote.connected === 1 ? "" : "s"} connected.`;
+  }
+  async function setRemote(mode) {
+    const data = await post("remote", { mode });
+    if (data) { $("#remote-last").textContent = ""; render(data); }
+  }
+  $("#remote-turn-on").addEventListener("click", () => setRemote("on"));
+  $("#remote-turn-off").addEventListener("click", () => setRemote("off"));
+  $("#remote-new").addEventListener("click", () => {
+    if (window.confirm("Disconnect every phone and make a new code?")) setRemote("new");
+  });
 
   // A valid bingo holds auto-play so the host can check it; "Next song" resumes it.
   function noteNewWins(next) {
@@ -395,6 +446,7 @@ if (root) {
     renderRules();
     renderEffects();
     renderBackground();
+    renderRemote();
   }
 
   // ---- buttons
@@ -403,10 +455,10 @@ if (root) {
     const data = await post("start");
     if (data) render(data);
   });
-  $("#btn-next").addEventListener("click", advance);
+  $("#btn-next").addEventListener("click", () => advance());
   $("#btn-replay").addEventListener("click", () => { cancelCountdown(); playSong(state.current_song); });
   pauseButton.addEventListener("click", () => { if (audio.paused) audio.play(); else audio.pause(); });
-  $("#btn-skip").addEventListener("click", async () => { const d = await post("skip"); if (d) render(d); });
+  $("#btn-skip").addEventListener("click", () => skipNext());
   $("#btn-reshuffle").addEventListener("click", async () => { const d = await post("reshuffle"); if (d) render(d); });
   $("#btn-finish").addEventListener("click", async () => {
     if (!window.confirm("End the game for everyone?")) return;
@@ -467,6 +519,10 @@ if (root) {
     onStatus: (name) => {
       $("#connection").textContent = statusText(name);
       $("#connection").classList.toggle("warn", name !== "live");
+    },
+    events: {
+      command: handleCommand,
+      remote: (info) => { state.remote = { ...(state.remote || {}), connected: info.connected }; renderRemote(); },
     },
   });
 

@@ -76,6 +76,7 @@ class Game(SQLModel, table=True):
     # one run can't break the others.
     series_id: int | None = None
     run_number: int = 1
+    remote_code: str = ""  # pairing code for the phone remote; empty means the remote is off
     created_at: datetime = Field(default_factory=utcnow)
 
 

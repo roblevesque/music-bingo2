@@ -185,3 +185,13 @@ a.who:hover { background: var(--bg); }
   .mainnav { order: 3; flex: 1 1 100%; flex-wrap: nowrap; }  /* a full-width row of equal, finger-sized tabs */
   .mainnav a { flex: 1 1 0; justify-content: center; min-height: 2.75rem; padding: 0 0.4rem; }
 }
+
+/* ---- phone remote ---- */
+[hidden] { display: none !important; }
+main:has(.remote-page) { max-width: 520px; }
+.remote-title { font-size: 1.3rem; }
+.remote-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin: 1rem 0; }
+.remote-btn { min-height: 4.5rem; padding: 0.5rem; border-radius: 12px; font-size: 1.1rem; font-weight: 600;
+  touch-action: manipulation; /* no double-tap-to-zoom delay */ -webkit-tap-highlight-color: transparent; }
+.remote-btn.wide { grid-column: 1 / -1; min-height: 6.5rem; font-size: 1.7rem; }
+.remote-btn.stop { width: 100%; min-height: 3.2rem; }

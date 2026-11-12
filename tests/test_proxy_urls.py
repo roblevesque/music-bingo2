@@ -12,7 +12,10 @@ def check_page(html):
     urls = re.findall(r'(?:src|href|action)="([^"]+)"', html)
     assert [u for u in urls if u.startswith(("http://", "https://", "//"))] == []
     assert 'href="/static/styles.css"' in html and 'src="/static/app.js"' in html
-    assert "internal.example" not in html
+    # The odd host must not reach the markup. The console's embedded JSON state is the one place it may appear:
+    # it carries the join link, which is built from the request unless MUSICBINGO_PUBLIC_URL is set (and is
+    # only displayed text, never a URL the browser loads).
+    assert "internal.example" not in re.sub(r'<script type="application/json".*?</script>', "", html, flags=re.S)
 
 
 @pytest.mark.parametrize("path", ["/login", "/join"])

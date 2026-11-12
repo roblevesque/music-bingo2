@@ -23,6 +23,7 @@ Inspired by [asrashley/music-bingo](https://github.com/asrashley/music-bingo). S
   already played, and shows a banner the moment a team calls a valid bingo. On a wide screen the
   controls and claims sit on the left and the playlist and teams on the right. Optional automatic next
   song and fade in/out.
+- **Phone remote:** run the game from your phone: next song, pause, replay, sound effects, and a bingo alert.
 - **Sound effects:** one-click (or number-key) *Thinking*, *Win* and *Lose* sounds from the host console, for
   the moments around checking a claim.
 - **Background music:** play your whole library, shuffled and quiet, before and after the game.
@@ -107,6 +108,31 @@ See [Backups](#backups) for how to back up safely.
 10. **Paper tickets:** type the ticket number into **Check a printed ticket** to see whether it wins the
    current round, and what it is still missing.
 11. **Afterwards:** **End game**, then **Run this game again** from the game page.
+
+### Phone remote
+
+Open **Phone remote** on the console and press **Turn on the remote**. It shows a six-character code and
+an address. On your phone, open that address (it ends in `/remote`), type the code, and you get a page
+with a big **Next song** button, **Pause / Resume**, **Replay**, **Skip next**, **Start game**, **Next round**,
+the sound effects, the current and next song, and a banner when a team calls a valid bingo.
+
+How it works: the songs play on the host computer, so the phone can't play anything itself. It sends
+each button press to the server, which passes it to the console window, and the console acts exactly as
+if you had clicked. That means:
+
+- **Keep the console window open** on the host computer. If it isn't, the phone says so and its buttons
+  pause instead of silently doing nothing. Use only one console window.
+- Browsers only allow sound after you have clicked something in the page. If a song doesn't start from the
+  phone, click anywhere in the console window once.
+- A tap that arrives late can't skip a song: **Next song** carries the song count the phone saw, and the
+  server ignores it if the game has already moved on. Double taps on one button send once.
+- The phone only gets what it needs: no playlist, team names or codes. Ending the game, rules and
+  settings stay on the console.
+
+Security: the code lets a phone drive *that one game's* console, nothing else; there is no access to your
+account. Wrong guesses are limited (8 in 5 minutes per client address, so behind a reverse proxy make sure
+`FORWARDED_ALLOW_IPS` is set, or every phone looks like the same client). **New code** or **Turn off**
+disconnects every phone at once. The remote is off until you turn it on, for each game.
 
 ### Sound effects
 
@@ -328,6 +354,7 @@ app/
     transfer.py      game export and import
     run.py           host console and its actions
     play.py          joining, marking, claiming (player side)
+    remote.py        the phone remote: pairing and relaying commands
   services/          pure Python where possible (no web framework)
     patterns.py      what counts as a win
     checker.py       claim verification
@@ -336,6 +363,7 @@ app/
     series.py        runs of the same game
     permissions.py   account rules
     effects.py       the list of sound effects offered in the console
+    remote.py        pairing codes, command checking, the phone's view of the game
     gameio.py        the game export file format
     events.py        live-update hub (Server-Sent Events)
     snapshots.py     state sent to players and to the host
@@ -375,7 +403,7 @@ Dockerfile, compose.yaml, .dockerignore
 ## Upgrading
 
 New tables are created on start-up. Columns added to existing tables since the first release
-(`game.current_round`, `game.series_id`, `game.run_number`, the account flags on `user`, `song.sha256`) are added by a small built-in migration,
+(`game.current_round`, `game.series_id`, `game.run_number`, `game.remote_code`, the account flags on `user`, `song.sha256`) are added by a small built-in migration,
 so an existing `data/bingo.db3` keeps working. Add Alembic before real users depend on the data.
 
 ## Known limitations
@@ -386,6 +414,7 @@ so an existing `data/bingo.db3` keeps working. Add Alembic before real users dep
 - Browsers may block audio until the page has been clicked. If a clip doesn't start, press Replay.
 - Printed tickets use a built-in font that covers Western European text. Other alphabets print as `?`
   unless you set `MUSICBINGO_PDF_FONT`.
+- The phone remote needs the console window to stay open on the host computer, and its pairing is per game.
 - Accounts can be disabled but not deleted, and there is no email-based password recovery.
 - A song that is in a game's pool can't be deleted from the library until that game is deleted.
   Rounds that have been played, or are in play, can't be deleted.

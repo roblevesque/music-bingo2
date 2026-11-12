@@ -15,10 +15,11 @@ from app.routes.games import owned_game, parse_rules
 from app.routes.play import join_url
 from app.security import check_csrf
 from app.services.checker import verify_claim
-from app.services.events import HOST, Event, stream
+from app.services.events import HOST, REMOTE, Event, stream
 from app.services.patterns import MODE_LINES, describe_line
 from app.services.playlist import PlaylistExhausted, advance, new_play_order, played_ids, reshuffle_remaining, skip_next
-from app.services.snapshots import audio_url, broadcast, host_state, round_name
+from app.services.remote import new_code
+from app.services.snapshots import audio_url, broadcast, host_state, remote_info, round_name
 from app.web import render
 
 router = APIRouter(prefix="/games/{game_id}/run")
@@ -29,7 +30,8 @@ def _conflict(message: str) -> HTTPException:
 
 
 def _state(request: Request, session: Session, game: Game) -> dict:
-    return host_state(session, game, join_url(request, game))
+    url = join_url(request, game)
+    return host_state(session, game, url, remote=remote_info(request.app.state.hub, game, url))
 
 
 def _commit_and_broadcast(request: Request, session: Session, game: Game) -> dict:
@@ -62,6 +64,7 @@ async def events(request: Request, game_id: int, user: User = Depends(require_us
     game = owned_game(session, user, game_id)
     hub = request.app.state.hub
     subscription = hub.subscribe(game.id, HOST)
+    hub.publish(game.id, REMOTE, Event("presence", {"console_online": True}))  # phones learn the console is open
     initial = [Event("state", _state(request, session, game))]
 
     async def body():
@@ -70,6 +73,7 @@ async def events(request: Request, game_id: int, user: User = Depends(require_us
                 yield chunk
         finally:
             hub.unsubscribe(subscription)
+            hub.publish(game.id, REMOTE, Event("presence", {"console_online": hub.subscriber_count(game.id, HOST) > 0}))
 
     return StreamingResponse(body(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
@@ -107,11 +111,13 @@ async def start(request: Request, game_id: int, csrf_token: str = Form(""),
 
 
 @router.post("/next")
-async def next_song(request: Request, game_id: int, csrf_token: str = Form(""),
+async def next_song(request: Request, game_id: int, csrf_token: str = Form(""), expect: str = Form(""),
                     user: User = Depends(require_user), session: Session = Depends(get_session)):
     check_csrf(request, csrf_token)
     game = owned_game(session, user, game_id)
     _require_active(game)
+    if expect != "" and (not expect.isdigit() or int(expect) != game.current_index):
+        raise _conflict("That song has already been played.")  # a stale or repeated tap from the remote
     try:
         _song_id, game.current_index = advance(list(game.play_order), game.current_index)
     except PlaylistExhausted:
@@ -120,11 +126,14 @@ async def next_song(request: Request, game_id: int, csrf_token: str = Form(""),
 
 
 @router.post("/skip")
-async def skip(request: Request, game_id: int, csrf_token: str = Form(""),
+async def skip(request: Request, game_id: int, csrf_token: str = Form(""), expect_next: str = Form(""),
                user: User = Depends(require_user), session: Session = Depends(get_session)):
     check_csrf(request, csrf_token)
     game = owned_game(session, user, game_id)
     _require_active(game)
+    upcoming = game.play_order[game.current_index] if game.current_index < len(game.play_order) else None
+    if expect_next != "" and (not expect_next.isdigit() or int(expect_next) != upcoming):
+        raise _conflict("The next song has changed.")  # a stale or repeated tap from the remote
     try:
         game.play_order = skip_next(list(game.play_order), game.current_index)
     except ValueError as exc:
@@ -139,6 +148,30 @@ async def reshuffle(request: Request, game_id: int, csrf_token: str = Form(""),
     game = owned_game(session, user, game_id)
     _require_active(game)
     game.play_order = reshuffle_remaining(list(game.play_order), game.current_index)
+    return _commit_and_broadcast(request, session, game)
+
+
+@router.post("/remote")
+async def set_remote(request: Request, game_id: int, mode: str = Form("on"), csrf_token: str = Form(""),
+                     user: User = Depends(require_user), session: Session = Depends(get_session)):
+    """Turn the phone remote on or off, or issue a new code. Off or new disconnects every paired phone."""
+    check_csrf(request, csrf_token)
+    if mode not in ("on", "off", "new"):
+        raise HTTPException(status_code=400, detail="Unknown remote setting")
+    game = owned_game(session, user, game_id)
+    was_on = bool(game.remote_code)
+    if mode == "off":
+        game.remote_code = ""
+    elif mode == "new" or not game.remote_code:
+        for _ in range(20):  # the code finds the game, so no two games may share one
+            code = new_code()
+            if session.exec(select(Game.id).where(Game.remote_code == code)).first() is None:
+                game.remote_code = code
+                break
+        else:
+            raise _conflict("Couldn't make a unique code. Please try again.")
+    if was_on and mode in ("off", "new"):
+        request.app.state.hub.publish(game.id, REMOTE, Event("revoked", {}))
     return _commit_and_broadcast(request, session, game)
 
 
