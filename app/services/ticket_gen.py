@@ -55,10 +55,11 @@ def generate_tickets(
         raise PoolTooSmall(
             f"A {size}x{size} ticket needs {cells} songs, but only {len(songs)} were selected."
         )
-    if math.comb(len(songs), cells) < count:
+    possible = math.comb(len(songs), cells)
+    if possible < count:
+        how_many = "Only 1 different ticket is" if possible == 1 else f"Only {possible} different tickets are"
         raise TooManyTickets(
-            f"Only {math.comb(len(songs), cells)} different tickets are possible from "
-            f"{len(songs)} songs. Select more songs or ask for fewer tickets."
+            f"{how_many} possible from {len(songs)} songs. Select more songs or ask for fewer tickets."
         )
 
     rng = rng or random.Random()

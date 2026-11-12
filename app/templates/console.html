@@ -52,6 +52,21 @@
         <audio id="effect-audio" preload="auto"></audio>
       </section>
 
+      <details class="card" id="bg-card">
+        <summary><strong>Background music</strong> <span class="muted">(before and after the game)</span></summary>
+        <p class="muted">Plays your whole library, shuffled, track after track. It stops by itself when the game starts.</p>
+        <div class="row">
+          <button id="bg-play" type="button">Play</button>
+          <button id="bg-pause" type="button" class="secondary">Pause</button>
+          <button id="bg-skip" type="button" class="secondary">Next track</button>
+          <button id="bg-stop" type="button" class="secondary">Stop</button>
+          <label>Volume <input type="range" id="bg-volume" min="0" max="100" value="40"></label>
+        </div>
+        <label class="check"><input type="checkbox" id="bg-after"> Start background music when I end the game</label>
+        <p id="bg-status" class="muted" aria-live="polite"></p>
+        <audio id="bg-audio" preload="auto"></audio>
+      </details>
+
       <section class="card">
         <h2>Claims this round</h2>
         <ul id="claims" class="plain"><li class="muted">No claims yet.</li></ul>
@@ -120,4 +135,4 @@
 </div>
 <script type="application/json" id="initial-state">{{ state|tojson }}</script>
 {% endblock %}
-{% block scripts %}<script type="module" src="{{ url_for('static', path='console.js') }}"></script>{% endblock %}
+{% block scripts %}<script type="module" src="{{ static_url('console.js') }}"></script>{% endblock %}

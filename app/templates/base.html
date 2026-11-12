@@ -4,14 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Music Bingo{% endblock %}</title>
-  <link rel="stylesheet" href="{{ url_for('static', path='styles.css') }}">
-  <script type="module" src="{{ url_for('static', path='app.js') }}"></script>
+  <link rel="stylesheet" href="{{ static_url('styles.css') }}">
+  <script type="module" src="{{ static_url('app.js') }}"></script>
 </head>
 <body>
+  {% set path = request.url.path if request else '' %}
   <header class="topbar">
     <a class="brand" href="/">&#9835; Music Bingo</a>
     {% if user %}
-    <nav><a href="/library">Library</a> <a href="/games">Games</a> <a href="/branding">Branding</a>{% if user.is_admin %} <a href="/users">Users</a>{% endif %}</nav>
+    <nav class="mainnav" aria-label="Main">
+      <a href="/library"{% if path.startswith('/library') %} aria-current="page"{% endif %}>Library</a>
+      <a href="/games"{% if path.startswith('/games') %} aria-current="page"{% endif %}>Games</a>
+      <a href="/branding"{% if path.startswith('/branding') %} aria-current="page"{% endif %}>Branding</a>
+      {% if user.is_admin %}<a href="/users"{% if path.startswith('/users') %} aria-current="page"{% endif %}>Users</a>{% endif %}
+    </nav>
     <form method="post" action="/logout" class="inline">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <a class="who" href="/account" title="Your account">{{ user.username }}</a>

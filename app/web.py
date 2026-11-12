@@ -13,6 +13,19 @@ templates = Jinja2Templates(directory=BASE_DIR / "templates")
 templates.env.filters["clock"] = format_time_ms
 
 
+def static_url(path: str) -> str:
+    """Where a static file is served from, as a path on the *current* origin.
+
+    Deliberately not `url_for`, which builds an absolute URL from the request's Host header and scheme.
+    Behind a proxy that doesn't forward those, such a URL points the browser at a different origin, and
+    browsers apply CORS rules to <script type="module">, so the page breaks with CORS errors.
+    """
+    return "/static/" + path.lstrip("/")
+
+
+templates.env.globals["static_url"] = static_url
+
+
 def error_page(request: Request, status_code: int, title: str, message: str):
     """A friendly error page. Deliberately doesn't touch the session, so it is safe anywhere."""
     context = {"user": None, "csrf_token": "", "flashes": [], "title": title, "message": message}

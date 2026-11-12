@@ -162,7 +162,26 @@ details.played-details summary { cursor: pointer; font-weight: 600; margin-botto
 
 button.secondary.playing { background: var(--accent); color: var(--accent-text); }
 
+input[type=range] { padding: 0; width: 10rem; }
+#bg-card .check { margin-top: 0.7rem; }
+
 /* ---- phase 6: accounts and game files ---- */
 .credentials { border-color: var(--accent); }
 .credentials code.secret { font-size: 1.3rem; letter-spacing: 0.08em; user-select: all; }
 a.who { color: var(--muted); }
+
+/* ---- navigation ---- */
+.mainnav { flex: 1; display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.mainnav a { display: inline-flex; align-items: center; min-height: 2.5rem; padding: 0 1rem; border: 1px solid transparent;
+  border-radius: 999px; color: var(--text); font-weight: 600; text-decoration: none;
+  transition: background-color 0.12s, border-color 0.12s, color 0.12s; }
+.mainnav a:hover { background: var(--bg); border-color: var(--border); }
+.mainnav a:focus-visible, a.who:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mainnav a[aria-current="page"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+a.who { display: inline-flex; align-items: center; min-height: 2.5rem; padding: 0 0.8rem; border-radius: 999px; text-decoration: none; }
+a.who:hover { background: var(--bg); }
+@media (max-width: 640px) {
+  .topbar form.inline { margin-left: auto; }
+  .mainnav { order: 3; flex: 1 1 100%; flex-wrap: nowrap; }  /* a full-width row of equal, finger-sized tabs */
+  .mainnav a { flex: 1 1 0; justify-content: center; min-height: 2.75rem; padding: 0 0.4rem; }
+}

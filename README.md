@@ -25,6 +25,7 @@ Inspired by [asrashley/music-bingo](https://github.com/asrashley/music-bingo). S
   song and fade in/out.
 - **Sound effects:** one-click (or number-key) *Thinking*, *Win* and *Lose* sounds from the host console, for
   the moments around checking a claim.
+- **Background music:** play your whole library, shuffled and quiet, before and after the game.
 - **Printed tickets:** download every ticket as one numbered PDF, hand them out, and check a paper
   ticket by number from the console.
 - **Ticket branding:** add your logo, an accent colour, and header and footer text from the web
@@ -77,6 +78,7 @@ All optional, set as environment variables.
 | `MUSICBINGO_MAX_UPLOAD_MB` | `50` | Per-file upload limit |
 | `MUSICBINGO_MAX_IMPORT_MB` | `300` | Largest game file (with audio) that can be imported |
 | `MUSICBINGO_HTTPS_ONLY` | `0` | Set to `1` when served over HTTPS so cookies are marked Secure |
+| `MUSICBINGO_PUBLIC_URL` | derived from the request | The address players use, e.g. `https://bingo.example.com`. Pins the join links shown in the console, which matters behind a proxy |
 | `MUSICBINGO_PDF_FONT` | built-in font | Path to a `.ttf` so printed tickets can show titles in other alphabets |
 | `MUSICBINGO_PDF_FONT_BOLD` | same as above | Optional bold `.ttf` to go with it |
 
@@ -120,6 +122,18 @@ that the committed files match the script. The console builds its buttons from t
 `app/services/effects.py`, so offering more effects, or your own uploads, later means changing that list
 rather than the page.
 
+### Background music
+
+Open **Background music** on the console (it starts collapsed) to play your *whole* library, shuffled, as
+background music before the game or once it has ended. Tracks play in full, one after another, and the
+list goes round again if it runs out. **Pause**, **Next track**, **Stop** and a volume slider (remembered
+in that browser, 40% to start) are there too. Tick **Start background music when I end the game** if you
+want it to begin by itself after **End game**.
+
+It is only available while a game is not running: when you press **Start game** the music eases out over
+about a second and the controls lock, and starting a sound effect pauses it. Like everything else it plays
+from the host's computer.
+
 ### Automatic next song and fades
 
 In the console, tick **Play the next song automatically** and set how many seconds to wait after each
@@ -144,9 +158,81 @@ docker compose up --build        # http://localhost:8000
 The compose file keeps the database, clips and session key in a named volume (`bingo-data`) so they
 survive rebuilds and upgrades. The image needs your `uv.lock` (run `uv sync` once and commit it) and
 runs a single worker as an unprivileged user. For HTTPS behind a reverse proxy, set
-`MUSICBINGO_HTTPS_ONLY=1`, and set `FORWARDED_ALLOW_IPS` to the proxy's address so join links use
-the public address. If you mount a folder from the host instead of the volume, make it writable by
+`MUSICBINGO_HTTPS_ONLY=1` and `MUSICBINGO_PUBLIC_URL`, and set `FORWARDED_ALLOW_IPS` to the proxy's
+address; see [Behind a reverse proxy](#behind-a-reverse-proxy). If you mount a folder from the host instead of the volume, make it writable by
 uid 10001.
+
+## Behind a reverse proxy
+
+The app expects to be served at the **root** of its own host name (`https://bingo.example.com/`, not
+`https://example.com/bingo/`), as a **single worker**. Everything else is about the proxy passing the
+browser's view of the request through.
+
+**What the proxy must do**
+
+- Pass the original `Host` header, and send `X-Forwarded-For` and `X-Forwarded-Proto`.
+- Not buffer responses: live updates are Server-Sent Events, and a buffering proxy stalls them.
+- Allow large request bodies: song clips and game files can be tens of megabytes, and nginx's default
+  limit (1 MB) rejects them.
+
+**What to set on the app**
+
+```bash
+MUSICBINGO_HTTPS_ONLY=1                         # when the public address is https://
+MUSICBINGO_PUBLIC_URL=https://bingo.example.com # so join links show the public address
+FORWARDED_ALLOW_IPS=127.0.0.1                   # the proxy's address (uvicorn only trusts X-Forwarded-* from here)
+```
+
+`FORWARDED_ALLOW_IPS` defaults to `127.0.0.1`, which is right when the proxy runs on the same machine.
+In Docker the proxy is a different address, so list it (`*` is acceptable only if the app's port is
+reachable from the proxy alone and never from the internet).
+
+**nginx**
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name bingo.example.com;
+    # ssl_certificate ...; ssl_certificate_key ...;
+
+    client_max_body_size 300m;           # clips and game files; the default of 1m rejects uploads
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;                      # without this the app sees the upstream's name
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;                              # live updates are Server-Sent Events
+        proxy_read_timeout 1h;
+    }
+}
+```
+
+**Caddy** (it sets the forwarding headers itself)
+
+```
+bingo.example.com {
+    request_body {
+        max_size 300MB
+    }
+    reverse_proxy 127.0.0.1:8000 {
+        flush_interval -1
+    }
+}
+```
+
+**If something is wrong**, open the browser's developer tools (Console and Network tabs):
+
+| Symptom | Cause and fix |
+|---|---|
+| CORS errors, or "blocked" requests, for `/static/*.js` or the stylesheet | The page is pointing at a different origin than the one you opened. Versions before this fix built asset URLs from the request's `Host` header, which breaks when the proxy doesn't pass the real one. Update; the app now uses plain paths. Also check `proxy_set_header Host $host` |
+| "Mixed content" warnings | The proxy isn't sending `X-Forwarded-Proto: https`, or `FORWARDED_ALLOW_IPS` doesn't include the proxy's address |
+| Join links show an internal address | Set `MUSICBINGO_PUBLIC_URL` |
+| Live updates freeze, or the console says "Reconnecting" | The proxy is buffering. Turn buffering off for the app (`proxy_buffering off`) and lengthen the read timeout |
+| "413 Request Entity Too Large" on upload or import | Raise the proxy's body limit (`client_max_body_size`) |
+| You can log in on plain HTTP but not on HTTPS (or the reverse) | `MUSICBINGO_HTTPS_ONLY` must match how the site is really served |
 
 ## Backups
 
@@ -281,12 +367,10 @@ Dockerfile, compose.yaml, .dockerignore
 - Behind a reverse proxy, set the request body limit at least as high as
   `MUSICBINGO_MAX_UPLOAD_MB`, and cap it so unauthenticated clients cannot send huge bodies.
 - Run it in Docker with the included `Dockerfile` and `compose.yaml` (see above).
-- Reverse proxies must not buffer `text/event-stream` responses (the app sends `X-Accel-Buffering: no`
-  for nginx).
+- See [Behind a reverse proxy](#behind-a-reverse-proxy) for working nginx and Caddy settings.
 - There is no login rate limiting yet; put the app behind something that provides it if it is exposed
   to the internet.
-- The join link uses the address the console was opened from. Behind a proxy, make sure it forwards
-  the original host and scheme.
+- Join links use `MUSICBINGO_PUBLIC_URL` if set, otherwise the address the console was opened from.
 
 ## Upgrading
 

@@ -9,7 +9,8 @@ services:
     environment:
       MUSICBINGO_HTTPS_ONLY: "0"   # set to "1" only when served over HTTPS
       # MUSICBINGO_MAX_UPLOAD_MB: "50"
-      # FORWARDED_ALLOW_IPS: "*"   # only if a trusted reverse proxy sits in front, so join links use its host and scheme
+      # MUSICBINGO_PUBLIC_URL: "https://bingo.example.com"   # the address players use; see the README
+      # FORWARDED_ALLOW_IPS: "172.18.0.1"                      # your reverse proxy's address, so X-Forwarded-* headers are trusted
     restart: unless-stopped
 
 volumes:

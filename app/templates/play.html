@@ -30,4 +30,4 @@
 </section>
 <script type="application/json" id="initial-state">{{ state|tojson }}</script>
 {% endblock %}
-{% block scripts %}<script type="module" src="{{ url_for('static', path='play.js') }}"></script>{% endblock %}
+{% block scripts %}<script type="module" src="{{ static_url('play.js') }}"></script>{% endblock %}

@@ -10,8 +10,10 @@ from fastapi.exception_handlers import http_exception_handler, request_validatio
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
+
 
 from app.config import Settings, load_settings
 from app.db import init_db, make_engine
@@ -19,6 +21,14 @@ from app.deps import LoginRequired, PasswordChangeRequired
 from app.routes import auth, branding, games, library, play, run, transfer, users
 from app.services.events import Hub
 from app.web import BASE_DIR, error_page, flash
+
+origins = [
+    "http://192.168.15.1:8000",
+    "http://localhost:8000",
+    "http://home.slowsilver.net:8000",
+    "http://127.0.0.1:8000",
+    "http://home.slowsilver.net:8000",
+]
 
 
 ERROR_TITLES = {
@@ -119,4 +129,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(branding.router)
     app.include_router(run.router)
     app.include_router(play.router)
+
+    app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    )
+
     return app

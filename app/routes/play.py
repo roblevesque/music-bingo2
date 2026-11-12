@@ -51,7 +51,8 @@ def team_for(request: Request, session: Session, game: Game) -> Team | None:
 
 
 def join_url(request: Request, game: Game) -> str:
-    return f"{str(request.base_url).rstrip('/')}/join/{game.code}"
+    base = request.app.state.settings.public_url or str(request.base_url).rstrip("/")
+    return f"{base}/join/{game.code}"
 
 
 def age_seconds(moment: datetime) -> float:

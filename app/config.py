@@ -13,6 +13,7 @@ class Settings:
     max_import_bytes: int = 300 * 1024 * 1024  # a game bundle (with audio) may be larger than one clip
     session_max_age: int = 60 * 60 * 24 * 14  # seconds
     https_only: bool = False  # set MUSICBINGO_HTTPS_ONLY=1 when served over TLS
+    public_url: str = ""  # e.g. https://bingo.example.com, so join links are right behind a proxy
     pdf_font: str | None = None  # optional .ttf so printed tickets can show non-Latin titles
     pdf_font_bold: str | None = None
 
@@ -48,12 +49,20 @@ class Settings:
         return key
 
 
+def _public_url(raw: str) -> str:
+    raw = raw.strip().rstrip("/")
+    if raw and not raw.startswith(("http://", "https://")):
+        raise ValueError("MUSICBINGO_PUBLIC_URL must start with http:// or https://, for example https://bingo.example.com")
+    return raw
+
+
 def load_settings() -> Settings:
     return Settings(
         data_dir=Path(os.environ.get("MUSICBINGO_DATA_DIR", "data")).resolve(),
         max_upload_bytes=int(os.environ.get("MUSICBINGO_MAX_UPLOAD_MB", "50")) * 1024 * 1024,
         max_import_bytes=int(os.environ.get("MUSICBINGO_MAX_IMPORT_MB", "300")) * 1024 * 1024,
         https_only=os.environ.get("MUSICBINGO_HTTPS_ONLY", "0") == "1",
+        public_url=_public_url(os.environ.get("MUSICBINGO_PUBLIC_URL", "")),
         pdf_font=os.environ.get("MUSICBINGO_PDF_FONT") or None,
         pdf_font_bold=os.environ.get("MUSICBINGO_PDF_FONT_BOLD") or None,
     )

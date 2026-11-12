@@ -20,6 +20,10 @@ if (root) {
   const autoStatus = $("#auto-status");
   const effectAudio = $("#effect-audio");
   const effectsBox = $("#effects");
+  const bgAudio = $("#bg-audio");
+  const bgStatus = $("#bg-status");
+  const bgVolume = $("#bg-volume");
+  const bgAfter = $("#bg-after");
 
   let state = JSON.parse(document.querySelector("#initial-state").textContent);
   let playing = null; // the song whose start/end window is playing
@@ -30,6 +34,10 @@ if (root) {
   let autoHold = false; // a team has called a valid bingo: don't auto-play until the host moves on
   let windowStop = false; // we paused the audio ourselves at the end of the clip window
   let activeEffect = null; // the sound effect that is playing, if any
+  let bgQueue = []; // background music: the library in a shuffled order
+  let bgIndex = -1;
+  let bgActive = false; // the host has started it (it may be paused)
+  let bgErrors = 0; // tracks in a row that failed to play
   let effectsSignature = ""; // so the effect buttons are only rebuilt when the list changes
   let knownClaims = new Set(state.claims.map((c) => c.id));
 
@@ -40,11 +48,14 @@ if (root) {
     autoBox.checked = Boolean(saved.auto);
     autoSeconds.value = clampNumber(saved.autoSeconds, 0, 120, 10);
     fadeSeconds.value = clampNumber(saved.fade, 0, 10, 0);
+    bgVolume.value = clampNumber(saved.bgVolume, 0, 100, 40);
+    bgAfter.checked = Boolean(saved.bgAfter);
   } catch { /* storage unavailable: keep the defaults in the page */ }
   const saveSettings = () => {
     try {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify({
         auto: autoBox.checked, autoSeconds: autoSeconds.value, fade: fadeSeconds.value,
+        bgVolume: bgVolume.value, bgAfter: bgAfter.checked,
       }));
     } catch { /* ignore */ }
   };
@@ -116,6 +127,74 @@ if (root) {
   });
   audio.addEventListener("ended", onClipFinished);
 
+  // ---- background music: the whole library, shuffled, for before and after the game
+  const bgAllowed = () => state.game.status !== "active";
+  const bgLevel = () => clampNumber(bgVolume.value, 0, 100, 40) / 100;
+  async function startBackground() {
+    if (!bgAllowed()) return;
+    let data;
+    try {
+      const response = await fetch(`/games/${gameId}/run/background`);
+      if (!response.ok) throw new Error();
+      data = await response.json();
+    } catch {
+      bgStatus.textContent = "Couldn't load your library. Try again.";
+      return;
+    }
+    if (!data.songs.length) { bgStatus.textContent = "Your library is empty. Upload some songs first."; return; }
+    bgQueue = data.songs;
+    bgIndex = -1;
+    bgErrors = 0;
+    bgActive = true;
+    playNextBackground();
+  }
+  function playNextBackground() {
+    if (!bgActive || !bgQueue.length) return;
+    bgIndex = (bgIndex + 1) % bgQueue.length; // when the shuffled list runs out, go round again
+    const track = bgQueue[bgIndex];
+    bgAudio.src = track.audio_url;
+    bgAudio.volume = bgLevel();
+    bgStatus.textContent = `Playing: ${songLine(track)}`;
+    bgAudio.play().catch(() => { bgStatus.textContent = "Your browser blocked the sound. Press Play again."; });
+    renderBackground();
+  }
+  function stopBackground(fade = false) {
+    if (!bgActive) return;
+    bgActive = false;
+    bgStatus.textContent = "";
+    if (!fade || bgAudio.paused) { bgAudio.pause(); renderBackground(); return; }
+    const from = bgAudio.volume;
+    let step = 0;
+    const timer = setInterval(() => { // ease out over about a second so the game doesn't start with a jolt
+      step += 1;
+      bgAudio.volume = Math.max(0, from * (1 - step / 10));
+      if (step >= 10) { clearInterval(timer); bgAudio.pause(); bgAudio.volume = bgLevel(); }
+    }, 80);
+    renderBackground();
+  }
+  function renderBackground() {
+    if (bgActive && !bgAllowed()) { stopBackground(true); return; }
+    $("#bg-play").disabled = !bgAllowed();
+    ["#bg-pause", "#bg-skip", "#bg-stop"].forEach((id) => { $(id).disabled = !bgActive; });
+    $("#bg-pause").textContent = bgActive && bgAudio.paused ? "Resume" : "Pause";
+  }
+  $("#bg-play").addEventListener("click", startBackground);
+  $("#bg-skip").addEventListener("click", playNextBackground);
+  $("#bg-stop").addEventListener("click", () => stopBackground(true));
+  $("#bg-pause").addEventListener("click", () => { if (bgAudio.paused) bgAudio.play(); else bgAudio.pause(); });
+  bgAudio.addEventListener("play", renderBackground);
+  bgAudio.addEventListener("pause", renderBackground);
+  bgAudio.addEventListener("playing", () => { bgErrors = 0; });
+  bgAudio.addEventListener("ended", playNextBackground);
+  bgAudio.addEventListener("error", () => { // a missing or unplayable file: move on, but give up if everything fails
+    if (!bgActive) return;
+    bgErrors += 1;
+    if (bgErrors > Math.min(10, bgQueue.length)) { stopBackground(); bgStatus.textContent = "Couldn't play those tracks."; }
+    else playNextBackground();
+  });
+  bgVolume.addEventListener("input", () => { bgAudio.volume = bgLevel(); saveSettings(); });
+  bgAfter.addEventListener("change", saveSettings);
+
   // ---- sound effects: the list comes from the server, so the buttons follow it
   function renderEffects() {
     const effects = state.effects || [];
@@ -144,6 +223,7 @@ if (root) {
   function triggerEffect(effect) {
     if (activeEffect && activeEffect.id === effect.id && effect.loop) { stopEffect(); return; } // press again to stop a loop
     cancelCountdown(); // a pending automatic next song must not start under an effect
+    if (bgActive && !bgAudio.paused) bgAudio.pause(); // an effect takes over from background music too
     if (!audio.paused) audio.pause();
     effectAudio.pause();
     effectAudio.src = effect.url;
@@ -314,10 +394,12 @@ if (root) {
 
     renderRules();
     renderEffects();
+    renderBackground();
   }
 
   // ---- buttons
   $("#btn-start").addEventListener("click", async () => {
+    stopBackground(true); // the game is about to begin
     const data = await post("start");
     if (data) render(data);
   });
@@ -329,7 +411,12 @@ if (root) {
   $("#btn-finish").addEventListener("click", async () => {
     if (!window.confirm("End the game for everyone?")) return;
     const d = await post("finish");
-    if (d) { audio.pause(); stopEffect(); render(d); }
+    if (d) {
+      audio.pause();
+      stopEffect();
+      render(d);
+      if (bgAfter.checked) startBackground();
+    }
   });
   $("#btn-next-round").addEventListener("click", async () => {
     const d = await post("round", { number: state.round.number + 1 });

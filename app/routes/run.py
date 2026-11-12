@@ -18,7 +18,7 @@ from app.services.checker import verify_claim
 from app.services.events import HOST, Event, stream
 from app.services.patterns import MODE_LINES, describe_line
 from app.services.playlist import PlaylistExhausted, advance, new_play_order, played_ids, reshuffle_remaining, skip_next
-from app.services.snapshots import broadcast, host_state, round_name
+from app.services.snapshots import audio_url, broadcast, host_state, round_name
 from app.web import render
 
 router = APIRouter(prefix="/games/{game_id}/run")
@@ -73,6 +73,19 @@ async def events(request: Request, game_id: int, user: User = Depends(require_us
 
     return StreamingResponse(body(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+@router.get("/background")
+def background_tracks(
+    request: Request, game_id: int, user: User = Depends(require_user), session: Session = Depends(get_session)
+):
+    """The host's whole library in a fresh random order, for background music before and after a game."""
+    owned_game(session, user, game_id)  # only the game's owner may ask
+    library = {s.id: s for s in session.exec(select(Song).where(Song.owner_id == user.id)).all()}
+    order = new_play_order(list(library))[:1000]
+    return {"songs": [
+        {"id": sid, "title": library[sid].title, "artist": library[sid].artist, "audio_url": audio_url(sid)} for sid in order
+    ]}
 
 
 # ---------------------------------------------------------------- actions
