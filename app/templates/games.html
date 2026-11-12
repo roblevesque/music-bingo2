@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Games &middot; Music Bingo{% endblock %}
+{% block title %}Games &middot; {{ app_name }}{% endblock %}
 {% block content %}
 <div class="row spread">
   <h1>Games</h1>
@@ -14,7 +14,7 @@
     <input type="file" name="bundle" accept=".zip,application/zip" required>
     <button type="submit">Import</button>
   </form>
-  <p class="muted">Choose a <code>.musicbingo.zip</code> file exported from any Music Bingo install. You get a new
+  <p class="muted">Choose a <code>.musicbingo.zip</code> file exported from any {{ app_name }} install. You get a new
     game with a new join code and the same tickets; songs already in your library are reused.</p>
 </section>
 {% endif %}

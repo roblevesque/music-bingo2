@@ -55,7 +55,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     engine = make_engine(settings.db_url)
     init_db(engine)
 
-    app = FastAPI(title="Music Bingo", docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(title=settings.app_name, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.settings = settings
     app.state.engine = engine
     app.state.remote_limiter = AttemptLimiter()  # slows down guessing of pairing codes

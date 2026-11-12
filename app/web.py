@@ -28,7 +28,9 @@ templates.env.globals["static_url"] = static_url
 
 def error_page(request: Request, status_code: int, title: str, message: str):
     """A friendly error page. Deliberately doesn't touch the session, so it is safe anywhere."""
-    context = {"user": None, "csrf_token": "", "flashes": [], "title": title, "message": message}
+    settings = request.app.state.settings
+    context = {"user": None, "csrf_token": "", "flashes": [], "title": title, "message": message,
+               "app_name": settings.app_name, "tagline": settings.tagline}
     return templates.TemplateResponse(request, "error.html", context, status_code=status_code)
 
 
@@ -43,4 +45,7 @@ def render(request: Request, name: str, *, status_code: int = 200, **context):
     context["flashes"] = request.session.pop("_flash", [])
     context["csrf_token"] = get_csrf_token(request)
     context.setdefault("user", None)
+    settings = request.app.state.settings
+    context.setdefault("app_name", settings.app_name)
+    context.setdefault("tagline", settings.tagline)
     return templates.TemplateResponse(request, name, context, status_code=status_code)

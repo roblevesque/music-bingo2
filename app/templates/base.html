@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Music Bingo{% endblock %}</title>
+  <title>{% block title %}{{ app_name }}{% endblock %}</title>
   <link rel="stylesheet" href="{{ static_url('styles.css') }}">
   <script type="module" src="{{ static_url('app.js') }}"></script>
 </head>
 <body>
   {% set path = request.url.path if request else '' %}
   <header class="topbar">
-    <a class="brand" href="/">&#9835; Music Bingo</a>
+    <a class="brand" href="/">&#9835; {{ app_name }}</a>
     {% if user %}
     <nav class="mainnav" aria-label="Main">
       <a href="/library"{% if path.startswith('/library') %} aria-current="page"{% endif %}>Library</a>

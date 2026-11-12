@@ -1,4 +1,4 @@
-# Music Bingo: Project Plan
+# Track Bingo: Project Plan
 
 A web-based Music Bingo app, inspired by [asrashley/music-bingo](https://github.com/asrashley/music-bingo), built entirely in Python with **no Node.js or front-end build step**.
 

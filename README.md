@@ -1,6 +1,6 @@
-# Music Bingo
+# Track Bingo
 
-A web-based Music Bingo game. The host plays short clips from their own song library through
+A web-based music bingo game. The host plays short clips from their own song library through
 their own speakers; players mark the matching songs on their tickets, on their phones or on
 paper. Pure Python: no Node.js and no front-end build step.
 
@@ -74,6 +74,8 @@ All optional, set as environment variables.
 
 | Variable | Default | Purpose |
 |---|---|---|
+| `MUSICBINGO_APP_NAME` | `Track Bingo` | The name shown in the page header and browser tab titles |
+| `MUSICBINGO_TAGLINE` | `All aboard!` | The line above "Join a game" on the page players open. Set it to empty to hide it |
 | `MUSICBINGO_DATA_DIR` | `./data` | SQLite database (`bingo.db3`), uploaded clips, generated secret key |
 | `MUSICBINGO_SECRET_KEY` | generated into `data/secret_key` | Signs session cookies |
 | `MUSICBINGO_MAX_UPLOAD_MB` | `50` | Per-file upload limit |
@@ -84,6 +86,10 @@ All optional, set as environment variables.
 | `MUSICBINGO_PDF_FONT_BOLD` | same as above | Optional bold `.ttf` to go with it |
 
 See [Backups](#backups) for how to back up safely.
+
+The `MUSICBINGO_` prefix, the `.musicbingo.zip` game-file extension and the `musicbingo-backup-` file names
+keep their original spelling on purpose, so existing settings, exported games and backups keep working
+whatever the app is called.
 
 ## Running a game
 

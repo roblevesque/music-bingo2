@@ -195,3 +195,5 @@ main:has(.remote-page) { max-width: 520px; }
   touch-action: manipulation; /* no double-tap-to-zoom delay */ -webkit-tap-highlight-color: transparent; }
 .remote-btn.wide { grid-column: 1 / -1; min-height: 6.5rem; font-size: 1.7rem; }
 .remote-btn.stop { width: 100%; min-height: 3.2rem; }
+
+.tagline { margin: 0 0 0.2rem; font-size: 1.1rem; font-weight: 700; color: var(--accent); }

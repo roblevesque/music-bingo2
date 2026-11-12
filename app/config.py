@@ -6,6 +6,20 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
+DEFAULT_APP_NAME = "Track Bingo"
+DEFAULT_TAGLINE = "All aboard!"
+
+
+def _app_name(raw: str | None) -> str:
+    return " ".join((raw or "").split())[:40] or DEFAULT_APP_NAME  # blank means "use the default"
+
+
+def _tagline(raw: str | None) -> str:
+    if raw is None:
+        return DEFAULT_TAGLINE
+    return " ".join(raw.split())[:80]  # set but blank means "no tagline"
+
+
 @dataclass(frozen=True)
 class Settings:
     data_dir: Path
@@ -13,6 +27,8 @@ class Settings:
     max_import_bytes: int = 300 * 1024 * 1024  # a game bundle (with audio) may be larger than one clip
     session_max_age: int = 60 * 60 * 24 * 14  # seconds
     https_only: bool = False  # set MUSICBINGO_HTTPS_ONLY=1 when served over TLS
+    app_name: str = DEFAULT_APP_NAME  # shown in the header and in browser tab titles
+    tagline: str = DEFAULT_TAGLINE  # shown on the page players join from; empty hides it
     public_url: str = ""  # e.g. https://bingo.example.com, so join links are right behind a proxy
     pdf_font: str | None = None  # optional .ttf so printed tickets can show non-Latin titles
     pdf_font_bold: str | None = None
@@ -62,6 +78,8 @@ def load_settings() -> Settings:
         max_upload_bytes=int(os.environ.get("MUSICBINGO_MAX_UPLOAD_MB", "50")) * 1024 * 1024,
         max_import_bytes=int(os.environ.get("MUSICBINGO_MAX_IMPORT_MB", "300")) * 1024 * 1024,
         https_only=os.environ.get("MUSICBINGO_HTTPS_ONLY", "0") == "1",
+        app_name=_app_name(os.environ.get("MUSICBINGO_APP_NAME")),
+        tagline=_tagline(os.environ.get("MUSICBINGO_TAGLINE")),
         public_url=_public_url(os.environ.get("MUSICBINGO_PUBLIC_URL", "")),
         pdf_font=os.environ.get("MUSICBINGO_PDF_FONT") or None,
         pdf_font_bold=os.environ.get("MUSICBINGO_PDF_FONT_BOLD") or None,

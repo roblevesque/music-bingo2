@@ -68,7 +68,7 @@ def test_bundle_without_audio_has_no_clips(tmp_path):
 
 
 @pytest.mark.parametrize("change, message", [
-    (lambda m: m.update(format="something-else"), "isn't a Music Bingo game file"),
+    (lambda m: m.update(format="something-else"), "isn't a Track Bingo game file"),
     (lambda m: m.update(version=99), "newer version"),
     (lambda m: m.update(version="1"), "valid version"),
     (lambda m: m["game"].update(grid_size=2), "grid size"),

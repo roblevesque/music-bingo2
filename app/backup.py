@@ -92,7 +92,7 @@ def _safe_members(archive: tarfile.TarFile) -> list[tarfile.TarInfo]:
         ):
             raise ValueError(f"Refusing to restore: unexpected entry {member.name!r} in the archive.")
     if DB_NAME not in {m.name for m in members}:
-        raise ValueError(f"This archive has no {DB_NAME}; it isn't a Music Bingo backup.")
+        raise ValueError(f"This archive has no {DB_NAME}; it isn't a Track Bingo backup.")
     return members
 
 

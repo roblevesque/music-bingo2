@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ game.name }} &middot; Music Bingo{% endblock %}
+{% block title %}{{ game.name }} &middot; {{ app_name }}{% endblock %}
 
 {% macro round_fields(r, size_hint) %}
   <label>Name <input name="name" value="{{ r.name if r else '' }}" maxlength="60" placeholder="e.g. Round 2"></label>

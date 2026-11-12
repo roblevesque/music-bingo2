@@ -152,12 +152,12 @@ def _int(value: object, what: str, *, minimum: int = 0, maximum: int = 10**9, nu
 
 def parse_manifest(data: object) -> GameBundle:
     if not isinstance(data, dict) or data.get("format") != FORMAT:
-        raise BundleError("This isn't a Music Bingo game file.")
+        raise BundleError("This isn't a Track Bingo game file.")
     version = data.get("version")
     if isinstance(version, bool) or not isinstance(version, int) or version < 1:
         raise BundleError("This game file has no valid version.")
     if version > VERSION:
-        raise BundleError("This game file was made by a newer version of Music Bingo. Please upgrade first.")
+        raise BundleError("This game file was made by a newer version of Track Bingo. Please upgrade first.")
 
     game = data.get("game")
     if not isinstance(game, dict):

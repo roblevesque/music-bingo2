@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Ticket branding &middot; Music Bingo{% endblock %}
+{% block title %}Ticket branding &middot; {{ app_name }}{% endblock %}
 {% block content %}
 <h1>Ticket branding</h1>
 <p class="muted">Add your logo, colour and wording to printed tickets. The colour and logo also appear on
@@ -12,7 +12,7 @@
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
     <label>Header text <span class="muted">(shown instead of the game name)</span>
-      <input name="header_text" id="header_text" value="{{ form.header_text }}" maxlength="80" placeholder="e.g. Thursday Music Bingo">
+      <input name="header_text" id="header_text" value="{{ form.header_text }}" maxlength="80" placeholder="e.g. Thursday {{ app_name }}">
     </label>
     <label>Footer text <span class="muted">(printed along the bottom of each ticket)</span>
       <input name="footer_text" id="footer_text" value="{{ form.footer_text }}" maxlength="120" placeholder="e.g. The Rusty Anchor &middot; every Thursday at 8pm">

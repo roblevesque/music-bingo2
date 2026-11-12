@@ -8,6 +8,8 @@ services:
       - bingo-data:/data        # database, clips and the session key survive rebuilds
     environment:
       MUSICBINGO_HTTPS_ONLY: "0"   # set to "1" only when served over HTTPS
+      # MUSICBINGO_APP_NAME: "Track Bingo"   # the name shown in the page header and tab titles
+      # MUSICBINGO_TAGLINE: "All aboard!"     # shown on the join page; set to "" to hide it
       # MUSICBINGO_MAX_UPLOAD_MB: "50"
       # MUSICBINGO_PUBLIC_URL: "https://bingo.example.com"   # the address players use; see the README
       # FORWARDED_ALLOW_IPS: "172.18.0.1"                      # your reverse proxy's address, so X-Forwarded-* headers are trusted
